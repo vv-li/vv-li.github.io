@@ -904,9 +904,12 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L5 8l5 5"/></svg>
     Back to albums
   </div>
-  <div class="album-header">
-    <h1 id="album-view-title">Album title</h1>
-    <div class="sub" id="album-view-meta"></div>
+  <div class="album-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+    <div>
+      <h1 id="album-view-title">Album title</h1>
+      <div class="sub" id="album-view-meta"></div>
+    </div>
+    <button id="album-share-btn" class="btn btn-sm btn-ghost" style="margin-top:0.5rem;">Share ↗</button>
   </div>
   <div class="photos-masonry" id="album-photos-grid">
     <div class="empty-state"><p class="loading-dots">Loading photos</p></div>
@@ -1290,10 +1293,22 @@ async function loadAlbums() {
 function esc(s) { return (s||'').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
 
 async function openAlbum(id, title, location, year) {
+  window.location.hash = 'album-' + id;
   document.getElementById('photography').style.display = 'none';
   document.getElementById('album-view').style.display = 'block';
   document.getElementById('album-view-title').textContent = title;
   document.getElementById('album-view-meta').textContent = [location, year].filter(Boolean).join(' · ');
+
+  // Add share button to album header
+  const shareBtn = document.getElementById('album-share-btn');
+  if (shareBtn) {
+    shareBtn.onclick = () => {
+      navigator.clipboard.writeText(window.location.href);
+      shareBtn.textContent = 'Link copied!';
+      setTimeout(() => shareBtn.textContent = 'Share ↗', 2000);
+    };
+  }
+
   document.getElementById('album-photos-grid').innerHTML = '<div class="empty-state"><p class="loading-dots">Loading photos</p></div>';
   document.getElementById('album-view').scrollIntoView({ behavior: 'smooth' });
 
@@ -1326,6 +1341,7 @@ function renderAlbumPhotos(photos) {
 }
 
 function closeAlbumView() {
+  history.pushState('', document.title, window.location.pathname);
   document.getElementById('album-view').style.display = 'none';
   document.getElementById('photography').style.display = 'block';
 }
@@ -1672,10 +1688,21 @@ function setStatus(id, type, msg) {
 document.addEventListener('DOMContentLoaded', () => {
   loadProfile();
   checkAuth();
-  // Show portals on nav back
   document.querySelector('a[href="#hero"]').addEventListener('click', () => {
     showPortals();
   });
+
+  // Handle direct album links
+  const hash = window.location.hash;
+  if (hash.startsWith('#album-')) {
+    const albumId = parseInt(hash.replace('#album-', ''));
+    if (albumId) {
+      showSection('photography');
+      sb.from('albums').select('*').eq('id', albumId).single().then(({ data }) => {
+        if (data) openAlbum(data.id, data.title, data.location || '', data.year || '');
+      });
+    }
+  }
 });
 </script>
 </body>
