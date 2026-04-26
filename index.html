@@ -1073,16 +1073,12 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
           <input type="text" id="al-year" placeholder="e.g. September 2024">
         </div>
         <div class="field">
-  	   <label>Description</label>
-  	   <textarea id="al-desc" placeholder="A sentence or two about this trip..."></textarea>
-	</div>
-	<div class="field">
-  	   <label>Album caption</label>
-  	   <input type="text" id="al-caption" placeholder="A sentence caption describing this set of photos">
-	</div>
-	<button class="btn btn-md btn-primary" onclick="createAlbum()">Create album</button>
+          <label>Description</label>
+          <textarea id="al-desc" placeholder="A sentence or two about this trip..."></textarea>
+        </div>
+        <button class="btn btn-md btn-primary" onclick="createAlbum()">Create album</button>
         <div class="status-msg" id="album-status"></div>
-      	</div>
+      </div>
       <div class="card">
         <h3>Your albums</h3>
         <div id="admin-albums-list"><p style="font-size:13px;color:var(--stone);">Loading<span class="loading-dots"></span></p></div>
@@ -1287,9 +1283,8 @@ async function loadAlbums() {
     return `<div class="album-card" onclick="openAlbum(${al.id}, '${esc(al.title)}', '${esc(al.location||'')}', '${esc(al.year||'')}')">
       <div style="overflow:hidden;">${coverHTML}</div>
       <div class="album-info">
-  <h3>${al.title}</h3>
-  ${al.caption ? `<p style="font-size:13px;color:var(--stone);font-style:italic;margin:0.3rem 0 0.4rem;line-height:1.5;">${al.caption}</p>` : ''}
-  <div class="meta">${[al.location, al.year].filter(Boolean).join(' · ')}...
+        <h3>${al.title}</h3>
+        <div class="meta">${[al.location, al.year].filter(Boolean).join(' · ')}${count ? ' · ' + count + ' photo' + (count===1?'':'s') : ''}</div>
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -1356,15 +1351,13 @@ async function createAlbum() {
   const location = document.getElementById('al-location').value.trim();
   const year = document.getElementById('al-year').value.trim();
   const description = document.getElementById('al-desc').value.trim();
-  const map_url = document.getElementById('al-mapurl').value.trim();
-  const caption = document.getElementById('al-caption').value.trim();
   if (!title) { setStatus('album-status','error','Please enter a title.'); return; }
 
   setStatus('album-status','loading','Creating album…');
-  const { error } = await sb.from('albums').insert({ title, location, year, description, map_url, caption });
+  const { error } = await sb.from('albums').insert({ title, location, year, description });
   if (error) { setStatus('album-status','error', error.message); return; }
   setStatus('album-status','success','Album created!');
-  ['al-title','al-location','al-year','al-desc','al-mapurl','al-caption'].forEach(id => document.getElementById(id).value = '');
+  ['al-title','al-location','al-year','al-desc'].forEach(id => document.getElementById(id).value = '');
   loadAdminAlbums();
   loadPhotoAlbumSelect();
 }
