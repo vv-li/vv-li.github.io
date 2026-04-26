@@ -843,7 +843,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
      WHO AM I
 ════════════════════════════════════════ -->
 <section id="who-am-i" style="
-  max-width: 800px;
+  max-width: 810px;
   margin: 0 auto;
   padding: 0.5rem 0.5rem 0.5rem;
   text-align: center;
@@ -1223,9 +1223,7 @@ async function loadProfile() {
 }
 
 function formatName(name) {
-  const parts = name.trim().split(' ');
-  if (parts.length === 1) return `<em>${parts[0]}</em>`;
-  return parts.slice(0,-1).join(' ') + ' <em>' + parts[parts.length-1] + '</em>';
+  return name;
 }
 
 async function saveProfile() {
