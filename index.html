@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vivian Li — Photography & Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Karla:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink: #1a1a18;
+  --mist: #F8E0F7;
+  --stone: #8a8880;
+  --fern: #9B6B98;
+  --accent: #7A4A77;
+  --dusk: #E0C4DE;
+  --paper: #faf8f4;
+  --warn: #8B3A2A;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Karla', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ── NAV ─────────────────────────────────── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.4rem 3rem;
+  background: rgba(250,248,244,0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 0.5px solid var(--dusk);
+  transition: all 0.3s;
+}
+
+.nav-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.15rem;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.nav-links { display: flex; gap: 2.5rem; list-style: none; align-items: center; }
+.nav-links a {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--stone);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--ink); }
+.nav-links .admin-link { color: var(--fern); }
+
+/* ── HERO / PROFILE ──────────────────────── */
+#hero {
+  min-height: unset;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8rem 2rem 1rem;
+  text-align: center;
+  position: relative;
+}
+
+.profile-photo-wrap {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 2.5rem;
+  border: 3px solid var(--dusk);
+  background: #3a4a30;
+  position: relative;
+}
+
+.profile-photo-wrap img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-initials {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.6);
+}
+
+.hero-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.8rem, 6vw, 4.5rem);
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.75rem;
+}
+
+.hero-name em { font-style: italic; color: var(--fern); }
+
+.hero-tagline {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--stone);
+  margin-bottom: 1.8rem;
+}
+
+.hero-bio {
+  font-size: 15px;
+  color: var(--stone);
+  max-width: 52ch;
+  line-height: 1.9;
+  margin: 0 auto 3rem;
+}
+
+.scroll-cue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--stone);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: bob 2s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(6px); }
+}
+
+.scroll-cue svg { width: 16px; height: 16px; stroke: var(--stone); fill: none; stroke-width: 1.5; }
+
+
+/* ── SECTION DIVIDERS ────────────────────── */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.section-label span {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--stone);
+  white-space: nowrap;
+}
+
+.section-label::before,
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 0.5px;
+  background: var(--dusk);
+}
+
+/* ── PORTALS ROW ─────────────────────────── */
+#portals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 70vh;
+  border-top: 0.5px solid var(--dusk);
+}
+
+.portal {
+  padding: 5rem 4rem;
+  border-right: 0.5px solid var(--dusk);
+  cursor: pointer;
+  transition: background 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.portal:last-child { border-right: none; }
+.portal:hover { background: rgba(74,82,64,0.03); }
+
+.portal-icon {
+  width: 48px; height: 48px;
+  margin-bottom: 2rem;
+  opacity: 0.4;
+}
+
+.portal h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.2rem;
+  font-weight: 300;
+  line-height: 1.1;
+  margin-bottom: 0.8rem;
+}
+
+.portal h2 em { font-style: italic; color: var(--fern); }
+
+.portal p {
+  font-size: 13px;
+  color: var(--stone);
+  max-width: 38ch;
+  line-height: 1.8;
+  margin-bottom: 2rem;
+}
+
+.portal-cta {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fern);
+}
+
+/* ── PHOTOGRAPHY SECTION ─────────────────── */
+#photography {
+  padding: 6rem 3rem;
+  border-top: 0.5px solid var(--dusk);
+  display: none;
+}
+
+.albums-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.album-card {
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+  border: 0.5px solid var(--dusk);
+  transition: border-color 0.3s;
+}
+
+.album-card:hover { border-color: var(--fern); }
+
+.album-cover {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s ease;
+  background: #3a4a30;
+}
+
+.album-card:hover .album-cover { transform: scale(1.04); }
+
+.album-cover-placeholder {
+  width: 100%;
+  aspect-ratio: 4/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-style: italic;
+  color: rgba(255,255,255,0.5);
+}
+
+.album-info {
+  padding: 1.25rem;
+  background: var(--paper);
+}
+
+.album-info h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+  margin-bottom: 0.25rem;
+}
+
+.album-info .meta {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--stone);
+}
+
+/* ── ALBUM VIEW ─────────────────────────── */
+#album-view {
+  padding: 4rem 3rem 6rem;
+  display: none;
+}
+
+.album-back {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--stone);
+  cursor: pointer;
+  margin-bottom: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.2s;
+}
+
+.album-back:hover { color: var(--ink); }
+
+.album-header { margin-bottom: 3rem; }
+
+.album-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.8rem;
+  font-weight: 300;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+}
+
+.album-header .sub {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
+.photos-masonry {
+  columns: 3;
+  column-gap: 1rem;
+}
+
+.photo-item {
+  break-inside: avoid;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.photo-item img {
+  width: 100%;
+  display: block;
+  transition: transform 0.5s ease;
+}
+
+.photo-item .photo-placeholder {
+  width: 100%;
+  display: block;
+  transition: transform 0.5s ease;
+}
+
+.photo-item:hover img,
+.photo-item:hover .photo-placeholder { transform: scale(1.03); }
+
+.photo-caption-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 2rem 1rem 0.75rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.photo-item:hover .photo-caption-bar { opacity: 1; }
+
+.photo-caption-bar p {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.9);
+  line-height: 1.4;
+}
+
+/* ── LIGHTBOX ───────────────────────────── */
+#lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(5,8,4,0.93);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+#lightbox.open { display: flex; }
+
+.lightbox-img {
+  max-width: 80vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+.lightbox-caption {
+  position: fixed;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.lightbox-caption p {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 0.25rem;
+}
+
+.lightbox-caption small {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+}
+
+.lightbox-close {
+  position: fixed;
+  top: 1.5rem; right: 2rem;
+  font-size: 1.5rem;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+.lightbox-close:hover { color: white; }
+
+.lightbox-nav {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 1rem;
+  transition: color 0.2s;
+}
+
+.lightbox-nav:hover { color: white; }
+#lb-prev { left: 1rem; }
+#lb-next { right: 1rem; }
+
+/* ── BLOG SECTION ───────────────────────── */
+#blog {
+  padding: 6rem 3rem;
+  border-top: 0.5px solid var(--dusk);
+  display: none;
+}
+
+.blog-posts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 2.5rem;
+}
+
+.post-card {
+  cursor: pointer;
+  border-bottom: 0.5px solid var(--dusk);
+  padding-bottom: 2rem;
+  transition: padding-left 0.2s;
+}
+
+.post-card:hover { padding-left: 0.4rem; }
+
+.post-cover {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: 2px;
+  margin-bottom: 1.2rem;
+  display: block;
+  background: #3a4a30;
+}
+
+.post-cover-placeholder {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 2px;
+  margin-bottom: 1.2rem;
+  display: block;
+}
+
+.post-tag {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--fern);
+  margin-bottom: 0.4rem;
+}
+
+.post-card h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+  line-height: 1.25;
+  margin-bottom: 0.5rem;
+}
+
+.post-excerpt {
+  font-size: 13px;
+  color: var(--stone);
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.post-meta { font-size: 11px; color: var(--stone); letter-spacing: 0.04em; }
+
+/* ── POST FULL VIEW ─────────────────────── */
+#post-view {
+  padding: 6rem 0 6rem;
+  display: none;
+  max-width: 720px;
+  margin: 0 auto;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.post-view-back {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--stone);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 3rem;
+  transition: color 0.2s;
+}
+
+.post-view-back:hover { color: var(--ink); }
+
+.post-full-tag {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fern);
+  margin-bottom: 1rem;
+}
+
+.post-full-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 300;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+}
+
+.post-full-meta {
+  font-size: 12px;
+  color: var(--stone);
+  letter-spacing: 0.06em;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 0.5px solid var(--dusk);
+}
+
+.post-full-cover {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: 2px;
+  margin-bottom: 2.5rem;
+  display: block;
+}
+
+.post-full-body {
+  font-size: 15px;
+  line-height: 1.95;
+  color: #2a2a28;
+  white-space: pre-wrap;
+}
+
+.post-full-body p { margin-bottom: 1.4rem; }
+
+/* ── ADMIN PANEL ────────────────────────── */
+#admin-panel {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--paper);
+  overflow-y: auto;
+  padding: 5rem 3rem 3rem;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 0.5px solid var(--dusk);
+}
+
+.admin-header h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  font-weight: 300;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 0.5px solid var(--dusk);
+  margin-bottom: 2.5rem;
+}
+
+.admin-tab {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--stone);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  font-family: 'Karla', sans-serif;
+  font-weight: 300;
+  transition: all 0.2s;
+  margin-bottom: -0.5px;
+}
+
+.admin-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+.admin-section { display: none; }
+.admin-section.active { display: block; }
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.card {
+  background: white;
+  border: 0.5px solid var(--dusk);
+  border-radius: 4px;
+  padding: 1.5rem;
+}
+
+.card h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 0.5px solid var(--dusk);
+}
+
+.field { margin-bottom: 1.25rem; }
+
+.field label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--stone);
+  margin-bottom: 0.4rem;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border: 0.5px solid var(--dusk);
+  background: var(--paper);
+  font-family: 'Karla', sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--ink);
+  border-radius: 2px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus { border-color: var(--fern); }
+
+.field textarea { min-height: 100px; resize: vertical; line-height: 1.6; }
+
+.btn { display: inline-block; border: none; cursor: pointer; font-family: 'Karla', sans-serif; font-weight: 300; border-radius: 2px; transition: all 0.2s; }
+.btn-sm { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.55rem 1.1rem; }
+.btn-md { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.7rem 1.5rem; }
+.btn-primary { background: var(--accent); color: var(--paper); }
+.btn-primary:hover { background: var(--fern); }
+.btn-ghost { background: none; border: 0.5px solid var(--dusk); color: var(--stone); }
+.btn-ghost:hover { border-color: var(--stone); color: var(--ink); }
+.btn-danger { background: none; border: 0.5px solid #d4a09a; color: var(--warn); }
+.btn-danger:hover { background: #fdf0ee; }
+
+.drop-zone {
+  border: 0.5px dashed var(--dusk);
+  border-radius: 3px;
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.drop-zone:hover { border-color: var(--fern); background: rgba(74,82,64,0.02); }
+.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.drop-zone p { font-size: 13px; color: var(--stone); pointer-events: none; }
+.drop-zone small { font-size: 11px; color: var(--dusk); }
+
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 0.5px solid var(--dusk);
+  gap: 1rem;
+}
+
+.list-row:last-child { border-bottom: none; }
+.list-row .info h4 { font-size: 14px; font-weight: 400; margin-bottom: 0.1rem; }
+.list-row .info p { font-size: 12px; color: var(--stone); }
+.list-row .actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+.thumb-preview {
+  width: 56px; height: 56px;
+  object-fit: cover;
+  border-radius: 2px;
+  border: 0.5px solid var(--dusk);
+  flex-shrink: 0;
+  background: #3a4a30;
+}
+
+.status-msg {
+  font-size: 12px;
+  padding: 0.6rem 1rem;
+  border-radius: 2px;
+  margin-top: 1rem;
+  display: none;
+}
+
+.status-msg.success { display: block; background: #eaf3de; color: #3B6D11; }
+.status-msg.error { display: block; background: #fdf0ee; color: var(--warn); }
+.status-msg.loading { display: block; background: #f4f2ed; color: var(--stone); }
+
+/* ── FOOTER ─────────────────────────────── */
+footer {
+  padding: 2.5rem 3rem;
+  border-top: 0.5px solid var(--dusk);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+footer .name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  color: var(--stone);
+  letter-spacing: 0.08em;
+}
+
+footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
+
+/* ── UTILITIES ──────────────────────────── */
+.hidden { display: none !important; }
+.loading-dots::after {
+  content: '...';
+  animation: dots 1.2s steps(3, end) infinite;
+}
+@keyframes dots { 0%,20%{color:transparent;text-shadow:0.4em 0 0 transparent,0.8em 0 0 transparent} 40%{color:inherit;text-shadow:0.4em 0 0 transparent,0.8em 0 0 transparent} 60%{text-shadow:0.4em 0 0 currentColor,0.8em 0 0 transparent} 80%,100%{text-shadow:0.4em 0 0 currentColor,0.8em 0 0 currentColor} }
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--stone);
+}
+.empty-state p { font-size: 14px; }
+.empty-state .big { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 300; margin-bottom: 0.5rem; }
+
+/* Color swatches for placeholders */
+.sw1{background:linear-gradient(155deg,#3a4a30,#1e2c18,#506040)}
+.sw2{background:linear-gradient(200deg,#2a3a50,#1a2535,#384858)}
+.sw3{background:linear-gradient(140deg,#504030,#2d2018,#6a5040)}
+.sw4{background:linear-gradient(170deg,#384838,#202c20,#4a5e48)}
+.sw5{background:linear-gradient(150deg,#483838,#281e1e,#604848)}
+.sw6{background:linear-gradient(180deg,#2a3a2a,#182018,#3a503a)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#hero">Vivian Li</a>
+  <ul class="nav-links">
+    <li><a href="#hero">Home</a></li>
+    <li><a href="#" onclick="showSection('photography')">Photography</a></li>
+    <li><a href="#" onclick="showSection('blog')">Journal</a></li>
+    <li><a href="#" onclick="toggleAdmin()" class="admin-link">Admin ↗</a></li>
+  </ul>
+</nav>
+
+<!-- ═══════════════════════════════════════
+     HERO / PROFILE
+════════════════════════════════════════ -->
+<section id="hero">
+  <div class="profile-photo-wrap">
+    <img id="profile-img" src="" alt="Profile">
+  </div>
+  <h1 class="hero-name" id="hero-name">Vivian Li</h1>
+  <p class="hero-bio" id="hero-bio">Photography and reflections from all corners of the world</p>
+</section>
+
+<!-- ═══════════════════════════════════════
+     WHO AM I
+════════════════════════════════════════ -->
+<section id="who-am-i" style="
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0.5rem 0.5rem 0.5rem;
+  text-align: center;
+">
+  <div class="section-label"><span>Who am I</span></div>
+  <p style="
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.7;
+    color: var(--ink);
+    margin-bottom: 1.5rem;
+  " id="whoami-text">Most days, I spend my time as an economist conducting research on labour markets and socioeconomic outcomes. Outside of that, the things that occupy my time the most are music, photography, reading, <a href="https://www.geoguessr.com/" target="_blank">learning geography</a>, and planning my next travel (and now, this site, I suppose). I have a fascination with people and places, and to gain persepctive across cultures, languages, geography and time is a purpose which I am privileged to pursue. In many ways, I hope my travels help shape me into a better person; to grow more patient and give grace, expand my musical palette, become a more well-practiced photographer, and a sharper economist when researching people-centered issues. I'd be honoured to share this journey with anyone who'd like to tag along (metaphysically, of course). </p>
+</section>
+
+<!-- ═══════════════════════════════════════
+     PORTALS
+════════════════════════════════════════ -->
+<section id="portals">
+  <div class="portal" onclick="showSection('photography')">
+    <svg class="portal-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1">
+      <rect x="4" y="10" width="40" height="30" rx="2"/>
+      <circle cx="24" cy="25" r="8"/>
+      <circle cx="24" cy="25" r="3"/>
+      <circle cx="38" cy="15" r="2" fill="currentColor"/>
+    </svg>
+    <h2>Photography</h2>
+    <p>Albums showcasing slices of life from various parts of the world.</p>
+    <div class="portal-cta">Browse albums →</div>
+  </div>
+
+  <div class="portal" onclick="showSection('blog')">
+    <svg class="portal-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1">
+      <path d="M8 8h32M8 16h24M8 24h28M8 32h20M8 40h16"/>
+    </svg>
+    <h2>Notes from above ground</h2>
+    <p>Thought pieces, field notes, and slow reflections on life, learnings, and the experience of being somewhere.</p>
+    <div class="portal-cta">Read entries →</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════
+     PHOTOGRAPHY SECTION
+════════════════════════════════════════ -->
+<section id="photography">
+  <div class="section-label"><span>Photography</span></div>
+  <div id="albums-container">
+    <div class="empty-state" id="albums-loading">
+      <p class="loading-dots">Loading albums</p>
+    </div>
+  </div>
+</section>
+
+<!-- ALBUM DETAIL VIEW -->
+<section id="album-view">
+  <div class="album-back" onclick="closeAlbumView()">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L5 8l5 5"/></svg>
+    Back to albums
+  </div>
+  <div class="album-header">
+    <h1 id="album-view-title">Album title</h1>
+    <div class="sub" id="album-view-meta"></div>
+  </div>
+  <div class="photos-masonry" id="album-photos-grid">
+    <div class="empty-state"><p class="loading-dots">Loading photos</p></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════
+     BLOG SECTION
+════════════════════════════════════════ -->
+<section id="blog">
+  <div class="section-label"><span>Journal</span></div>
+  <div class="blog-posts-grid" id="posts-container">
+    <div class="empty-state" id="posts-loading">
+      <p class="loading-dots">Loading journal</p>
+    </div>
+  </div>
+</section>
+
+<!-- POST FULL VIEW -->
+<section id="post-view">
+  <div class="post-view-back" onclick="closePostView()">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L5 8l5 5"/></svg>
+    Back to journal
+  </div>
+  <div class="post-full-tag" id="pv-tag"></div>
+  <h1 class="post-full-title" id="pv-title"></h1>
+  <div class="post-full-meta" id="pv-meta"></div>
+  <img class="post-full-cover" id="pv-cover" alt="" style="display:none;">
+  <div class="post-full-body" id="pv-body"></div>
+</section>
+
+<!-- LIGHTBOX -->
+<div id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()">×</button>
+  <button class="lightbox-nav" id="lb-prev" onclick="lbNav(-1)">‹</button>
+  <img class="lightbox-img" id="lb-img" src="" alt="">
+  <button class="lightbox-nav" id="lb-next" onclick="lbNav(1)">›</button>
+  <div class="lightbox-caption">
+    <p id="lb-caption"></p>
+    <small id="lb-location"></small>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<section style="
+  border-top: 0.5px solid var(--dusk);
+  padding: 1rem;
+  text-align: center;
+">
+  <p style="
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--stone);
+    margin-bottom: 1rem;
+  ">Acknowledgements</p>
+  <p style="
+    font-size: 13px;
+    color: var(--stone);
+    line-height: 1.9;
+    max-width: 80ch;
+    margin: 0 auto;
+  "> This site and its contents were made possible through the extensive use of Lightroom, Github, Claude, and Supabase. And a special shoutout to my cat, Zooey, without whom nothing would be possible. </p>
+</section>
+
+<footer id="main-footer">
+  <div class="copy">© 2026 — all images & words reserved</div>
+</footer>
+
+<div id="admin-login" style="display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(10,12,8,0.85);align-items:center;justify-content:center;padding:2rem;">
+  <div style="background:var(--paper);border-radius:4px;padding:3rem;
+    width:100%;max-width:400px;border:0.5px solid var(--dusk);">
+    <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.8rem;
+      font-weight:300;margin-bottom:0.5rem;">Admin login</h2>
+    <p style="font-size:13px;color:var(--stone);margin-bottom:2rem;">Sign in to manage your site.</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="you@example.com">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••">
+    </div>
+    <div style="display:flex;gap:1rem;margin-top:1.5rem;">
+      <button class="btn btn-md btn-primary" onclick="adminLogin()">Sign in</button>
+      <button class="btn btn-md btn-ghost"
+        onclick="document.getElementById('admin-login').style.display='none'">Cancel</button>
+    </div>
+    <div class="status-msg" id="login-status"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     ADMIN PANEL
+════════════════════════════════════════ -->
+<div id="admin-panel">
+  <div class="admin-header">
+  <h2>Site admin</h2>
+  <div style="display:flex;gap:1rem;">
+    <button class="btn btn-md btn-ghost" onclick="adminLogout()">Sign out</button>
+    <button class="btn btn-md btn-ghost"
+      onclick="document.getElementById('admin-panel').style.display='none'">× Close</button>
+  </div>
+</div>
+
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchTab('profile')">Profile</button>
+    <button class="admin-tab" onclick="switchTab('albums')">Albums</button>
+    <button class="admin-tab" onclick="switchTab('photos')">Photos</button>
+    <button class="admin-tab" onclick="switchTab('posts')">Blog posts</button>
+  </div>
+
+  <!-- PROFILE TAB -->
+  <div class="admin-section active" id="tab-profile">
+    <div class="admin-grid">
+      <div class="card">
+        <h3>Profile information</h3>
+        <div class="field">
+          <label>Display name</label>
+          <input type="text" id="p-name" placeholder="Vivian Li">
+        </div>
+        <div class="field">
+          <label>Tagline</label>
+          <input type="text" id="p-tagline" placeholder="Photographer & Writer">
+        </div>
+        <div class="field">
+          <label>Bio</label>
+          <textarea id="p-bio" placeholder="A short paragraph about you..."></textarea>
+        </div>
+        <button class="btn btn-md btn-primary" onclick="saveProfile()">Save profile</button>
+        <div class="status-msg" id="profile-status"></div>
+      </div>
+      <div class="card">
+        <h3>Profile photo</h3>
+        <div class="drop-zone">
+          <input type="file" id="profile-photo-input" accept="image/*" onchange="uploadProfilePhoto(this)">
+          <p>Drop photo or click to browse</p>
+          <small>JPEG or PNG — square works best</small>
+        </div>
+        <div class="status-msg" id="photo-upload-status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALBUMS TAB -->
+  <div class="admin-section" id="tab-albums">
+    <div class="admin-grid">
+      <div class="card">
+        <h3>Create album</h3>
+        <div class="field">
+          <label>Album title</label>
+          <input type="text" id="al-title" placeholder="e.g. Iceland 2024">
+        </div>
+        <div class="field">
+          <label>Location</label>
+          <input type="text" id="al-location" placeholder="e.g. Reykjavik, Iceland">
+        </div>
+        <div class="field">
+          <label>Year / date</label>
+          <input type="text" id="al-year" placeholder="e.g. September 2024">
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <textarea id="al-desc" placeholder="A sentence or two about this trip..."></textarea>
+        </div>
+        <button class="btn btn-md btn-primary" onclick="createAlbum()">Create album</button>
+        <div class="status-msg" id="album-status"></div>
+      </div>
+      <div class="card">
+        <h3>Your albums</h3>
+        <div id="admin-albums-list"><p style="font-size:13px;color:var(--stone);">Loading<span class="loading-dots"></span></p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHOTOS TAB -->
+  <div class="admin-section" id="tab-photos">
+    <div class="admin-grid">
+      <div class="card">
+        <h3>Upload photos</h3>
+        <div class="field">
+          <label>Album</label>
+          <select id="ph-album-select"><option value="">Select album...</option></select>
+        </div>
+        <div class="field">
+          <label>Caption</label>
+          <input type="text" id="ph-caption" placeholder="Optional caption for this photo">
+        </div>
+        <div class="drop-zone">
+          <input type="file" id="photo-file-input" accept="image/*" multiple onchange="uploadPhotos(this)">
+          <p>Drop photos or click to browse</p>
+          <small>JPEG, PNG, WebP — multiple OK</small>
+        </div>
+        <div class="status-msg" id="photo-status"></div>
+      </div>
+      <div class="card">
+        <h3>Recent photos</h3>
+        <div id="admin-photos-list"><p style="font-size:13px;color:var(--stone);">Select an album above to see photos</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POSTS TAB -->
+  <div class="admin-section" id="tab-posts">
+    <div class="card" style="margin-bottom:2rem;">
+      <h3>New post</h3>
+      <div class="admin-grid" style="margin-bottom:1rem;">
+        <div class="field">
+          <label>Title</label>
+          <input type="text" id="post-title" placeholder="What is this about?">
+        </div>
+        <div class="field">
+          <label>Tag</label>
+          <select id="post-tag">
+            <option>Reflection</option>
+            <option>Travel</option>
+            <option>Process</option>
+            <option>Field notes</option>
+            <option>Review</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Cover image (optional)</label>
+        <div class="drop-zone" style="padding: 1rem;">
+          <input type="file" id="post-cover-input" accept="image/*">
+          <p style="font-size:12px;">Upload a cover photo</p>
+        </div>
+      </div>
+      <div class="field">
+        <label>Body</label>
+        <textarea id="post-body" style="min-height:200px;" placeholder="Write here..."></textarea>
+      </div>
+      <div style="display:flex;gap:1rem;">
+        <button class="btn btn-md btn-primary" onclick="publishPost()">Publish</button>
+        <button class="btn btn-md btn-ghost" onclick="saveDraft()">Save draft</button>
+      </div>
+      <div class="status-msg" id="post-status"></div>
+    </div>
+    <div class="card">
+      <h3>Published posts</h3>
+      <div id="admin-posts-list"><p style="font-size:13px;color:var(--stone);">Loading<span class="loading-dots"></span></p></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// CONFIG — Replace with your Supabase values
+// ════════════════════════════════════════════
+const SUPABASE_URL = 'https://yhbdnonbkdbtokqfypiw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloYmRub25ia2RidG9rcWZ5cGl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNjIxNzQsImV4cCI6MjA5MjczODE3NH0.x477IXZ_kMF8zGjvbGPbRIJbARTGfdbqJqB6m7q43M8';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ════════════════════════════════════════════
+// SECTION NAVIGATION
+// ════════════════════════════════════════════
+const allSections = ['photography','album-view','blog','post-view'];
+
+function showSection(name) {
+  allSections.forEach(s => {
+    document.getElementById(s).style.display = 'none';
+  });
+  document.getElementById('portals').style.display = 'none';
+  document.getElementById('main-footer').style.display = 'none';
+
+  if (name === 'photography') {
+    document.getElementById('photography').style.display = 'block';
+    loadAlbums();
+  } else if (name === 'blog') {
+    document.getElementById('blog').style.display = 'block';
+    loadPosts();
+  }
+
+  document.getElementById('main-footer').style.display = 'flex';
+  document.getElementById(name).scrollIntoView({ behavior: 'smooth' });
+}
+
+function showPortals() {
+  allSections.forEach(s => {
+    document.getElementById(s).style.display = 'none';
+  });
+  document.getElementById('portals').style.display = 'grid';
+  document.getElementById('main-footer').style.display = 'flex';
+}
+
+// ════════════════════════════════════════════
+// PROFILE
+// ════════════════════════════════════════════
+async function loadProfile() {
+  const { data } = await sb.from('profile').select('*').single();
+  if (!data) return;
+
+  if (data.name) {
+    document.getElementById('hero-name').innerHTML = formatName(data.name);
+    document.getElementById('p-name').value = data.name;
+  }
+  if (data.tagline) {
+    document.getElementById('hero-tagline').textContent = data.tagline;
+    document.getElementById('p-tagline').value = data.tagline;
+  }
+  if (data.bio) {
+    document.getElementById('hero-bio').textContent = data.bio;
+    document.getElementById('p-bio').value = data.bio;
+  }
+  if (data.photo_url) {
+    const img = document.getElementById('profile-img');
+    img.src = data.photo_url;
+    img.style.display = 'block';
+    document.getElementById('profile-initials').style.display = 'none';
+  }
+}
+
+function formatName(name) {
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return `<em>${parts[0]}</em>`;
+  return parts.slice(0,-1).join(' ') + ' <em>' + parts[parts.length-1] + '</em>';
+}
+
+async function saveProfile() {
+  const name = document.getElementById('p-name').value;
+  const tagline = document.getElementById('p-tagline').value;
+  const bio = document.getElementById('p-bio').value;
+
+  setStatus('profile-status', 'loading', 'Saving…');
+  const { error } = await sb.from('profile').upsert({ id: 1, name, tagline, bio });
+
+  if (error) { setStatus('profile-status', 'error', error.message); return; }
+  setStatus('profile-status', 'success', 'Profile saved!');
+  loadProfile();
+}
+
+async function uploadProfilePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  setStatus('photo-upload-status', 'loading', 'Uploading…');
+
+  const ext = file.name.split('.').pop();
+  const path = `profile/avatar.${ext}`;
+  const { error: upErr } = await sb.storage.from('site-media').upload(path, file, { upsert: true });
+  if (upErr) { setStatus('photo-upload-status', 'error', upErr.message); return; }
+
+  const { data: urlData } = sb.storage.from('site-media').getPublicUrl(path);
+  const photo_url = urlData.publicUrl + '?t=' + Date.now();
+
+  await sb.from('profile').upsert({ id: 1, photo_url });
+  setStatus('photo-upload-status', 'success', 'Photo updated!');
+  loadProfile();
+}
+
+// ════════════════════════════════════════════
+// ALBUMS
+// ════════════════════════════════════════════
+async function loadAlbums() {
+  const { data: albums, error } = await sb.from('albums').select('*, photos(count)').order('created_at', { ascending: false });
+  const container = document.getElementById('albums-container');
+
+  if (error) { container.innerHTML = `<div class="empty-state"><p>Error loading albums.</p></div>`; return; }
+  if (!albums || albums.length === 0) {
+    container.innerHTML = `<div class="empty-state"><p class="big">No albums yet.</p><p>Add your first album in the admin panel.</p></div>`;
+    return;
+  }
+
+  const swatches = ['sw1','sw2','sw3','sw4','sw5','sw6'];
+  container.innerHTML = `<div class="albums-grid">${albums.map((al, i) => {
+    const count = al.photos?.[0]?.count || 0;
+    const coverHTML = al.cover_url
+      ? `<img class="album-cover" src="${al.cover_url}" alt="${al.title}" loading="lazy">`
+      : `<div class="album-cover album-cover-placeholder ${swatches[i % 6]}">${al.title}</div>`;
+    return `<div class="album-card" onclick="openAlbum(${al.id}, '${esc(al.title)}', '${esc(al.location||'')}', '${esc(al.year||'')}')">
+      <div style="overflow:hidden;">${coverHTML}</div>
+      <div class="album-info">
+        <h3>${al.title}</h3>
+        <div class="meta">${[al.location, al.year].filter(Boolean).join(' · ')}${count ? ' · ' + count + ' photo' + (count===1?'':'s') : ''}</div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function esc(s) { return (s||'').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+async function openAlbum(id, title, location, year) {
+  document.getElementById('photography').style.display = 'none';
+  document.getElementById('album-view').style.display = 'block';
+  document.getElementById('album-view-title').textContent = title;
+  document.getElementById('album-view-meta').textContent = [location, year].filter(Boolean).join(' · ');
+  document.getElementById('album-photos-grid').innerHTML = '<div class="empty-state"><p class="loading-dots">Loading photos</p></div>';
+  document.getElementById('album-view').scrollIntoView({ behavior: 'smooth' });
+
+  const { data: photos } = await sb.from('photos').select('*').eq('album_id', id).order('created_at');
+  renderAlbumPhotos(photos || []);
+}
+
+let currentPhotos = [];
+let currentLbIdx = 0;
+
+function renderAlbumPhotos(photos) {
+  currentPhotos = photos;
+  const grid = document.getElementById('album-photos-grid');
+  if (!photos.length) {
+    grid.innerHTML = '<div class="empty-state"><p class="big">No photos yet.</p><p>Upload photos to this album via the admin panel.</p></div>';
+    return;
+  }
+
+  const heights = [220, 280, 200, 260, 240, 200, 300, 220];
+  grid.innerHTML = photos.map((ph, i) => {
+    const h = heights[i % heights.length];
+    const imgTag = ph.url
+      ? `<img src="${ph.url}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="lazy">`
+      : `<div class="${['sw1','sw2','sw3','sw4','sw5','sw6'][i%6]}" style="height:${h}px;"></div>`;
+    return `<div class="photo-item" onclick="openLightbox(${i})">
+      ${imgTag}
+      ${ph.caption ? `<div class="photo-caption-bar"><p>${ph.caption}</p></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function closeAlbumView() {
+  document.getElementById('album-view').style.display = 'none';
+  document.getElementById('photography').style.display = 'block';
+}
+
+async function createAlbum() {
+  const title = document.getElementById('al-title').value.trim();
+  const location = document.getElementById('al-location').value.trim();
+  const year = document.getElementById('al-year').value.trim();
+  const description = document.getElementById('al-desc').value.trim();
+  if (!title) { setStatus('album-status','error','Please enter a title.'); return; }
+
+  setStatus('album-status','loading','Creating album…');
+  const { error } = await sb.from('albums').insert({ title, location, year, description });
+  if (error) { setStatus('album-status','error', error.message); return; }
+  setStatus('album-status','success','Album created!');
+  ['al-title','al-location','al-year','al-desc'].forEach(id => document.getElementById(id).value = '');
+  loadAdminAlbums();
+  loadPhotoAlbumSelect();
+}
+
+async function loadAdminAlbums() {
+  const { data } = await sb.from('albums').select('*').order('created_at', { ascending: false });
+  const el = document.getElementById('admin-albums-list');
+  if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No albums yet.</p>'; return; }
+  el.innerHTML = data.map(al => `
+    <div class="list-row">
+      <div class="info"><h4>${al.title}</h4><p>${[al.location,al.year].filter(Boolean).join(' · ')||'No location set'}</p></div>
+      <div class="actions">
+        <button class="btn btn-sm btn-danger" onclick="deleteAlbum(${al.id})">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+async function deleteAlbum(id) {
+  if (!confirm('Delete this album and all its photos?')) return;
+  await sb.from('photos').delete().eq('album_id', id);
+  await sb.from('albums').delete().eq('id', id);
+  loadAdminAlbums();
+  loadPhotoAlbumSelect();
+}
+
+// ════════════════════════════════════════════
+// PHOTOS
+// ════════════════════════════════════════════
+async function loadPhotoAlbumSelect() {
+  const { data } = await sb.from('albums').select('id, title').order('created_at', { ascending: false });
+  const sel = document.getElementById('ph-album-select');
+  sel.innerHTML = '<option value="">Select album...</option>' + (data||[]).map(al => `<option value="${al.id}">${al.title}</option>`).join('');
+  sel.onchange = () => loadAdminPhotos(sel.value);
+}
+
+async function uploadPhotos(input) {
+  const albumId = document.getElementById('ph-album-select').value;
+  if (!albumId) { setStatus('photo-status','error','Please select an album first.'); return; }
+  const caption = document.getElementById('ph-caption').value.trim();
+  const files = Array.from(input.files);
+  if (!files.length) return;
+
+  setStatus('photo-status','loading',`Uploading ${files.length} photo${files.length>1?'s':''}…`);
+
+  let uploaded = 0;
+  for (const file of files) {
+    const ext = file.name.split('.').pop();
+    const path = `photos/${albumId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: upErr } = await sb.storage.from('site-media').upload(path, file);
+    if (upErr) { setStatus('photo-status','error', upErr.message); return; }
+
+    const { data: urlData } = sb.storage.from('site-media').getPublicUrl(path);
+    await sb.from('photos').insert({ album_id: albumId, url: urlData.publicUrl, caption, storage_path: path });
+    uploaded++;
+  }
+
+  // Set first photo as album cover if none
+  const { data: al } = await sb.from('albums').select('cover_url').eq('id', albumId).single();
+  if (!al?.cover_url) {
+    const { data: firstPh } = await sb.from('photos').select('url').eq('album_id', albumId).limit(1).single();
+    if (firstPh) await sb.from('albums').update({ cover_url: firstPh.url }).eq('id', albumId);
+  }
+
+  setStatus('photo-status','success',`${uploaded} photo${uploaded>1?'s':''} uploaded!`);
+  document.getElementById('ph-caption').value = '';
+  input.value = '';
+  loadAdminPhotos(albumId);
+}
+
+async function loadAdminPhotos(albumId) {
+  if (!albumId) return;
+  const { data } = await sb.from('photos').select('*').eq('album_id', albumId).order('created_at', { ascending: false });
+  const el = document.getElementById('admin-photos-list');
+  if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No photos in this album yet.</p>'; return; }
+  el.innerHTML = data.map(ph => `
+    <div class="list-row">
+      ${ph.url ? `<img class="thumb-preview" src="${ph.url}" alt="">` : '<div class="thumb-preview sw1"></div>'}
+      <div class="info" style="flex:1;min-width:0;"><h4 style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ph.caption || 'No caption'}</h4><p>Photo #${ph.id}</p></div>
+      <div class="actions">
+        <button class="btn btn-sm btn-danger" onclick="deletePhoto(${ph.id},'${esc(ph.storage_path||'')}',${albumId})">×</button>
+      </div>
+    </div>`).join('');
+}
+
+async function deletePhoto(id, path, albumId) {
+  if (!confirm('Delete this photo?')) return;
+  if (path) await sb.storage.from('site-media').remove([path]);
+  await sb.from('photos').delete().eq('id', id);
+  loadAdminPhotos(albumId);
+}
+
+// ════════════════════════════════════════════
+// LIGHTBOX
+// ════════════════════════════════════════════
+function openLightbox(idx) {
+  currentLbIdx = idx;
+  renderLightbox();
+  document.getElementById('lightbox').classList.add('open');
+  document.addEventListener('keydown', lbKey);
+}
+
+function renderLightbox() {
+  const ph = currentPhotos[currentLbIdx];
+  document.getElementById('lb-img').src = ph.url || '';
+  document.getElementById('lb-caption').textContent = ph.caption || '';
+  document.getElementById('lb-location').textContent = '';
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.removeEventListener('keydown', lbKey);
+}
+
+function lbNav(dir) {
+  currentLbIdx = (currentLbIdx + dir + currentPhotos.length) % currentPhotos.length;
+  renderLightbox();
+}
+
+function lbKey(e) {
+  if (e.key === 'ArrowRight') lbNav(1);
+  if (e.key === 'ArrowLeft') lbNav(-1);
+  if (e.key === 'Escape') closeLightbox();
+}
+
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
+
+// ════════════════════════════════════════════
+// BLOG POSTS
+// ════════════════════════════════════════════
+async function loadPosts() {
+  const { data: posts } = await sb.from('posts').select('*').eq('published', true).order('created_at', { ascending: false });
+  const container = document.getElementById('posts-container');
+  if (!posts || !posts.length) {
+    container.innerHTML = '<div class="empty-state"><p class="big">No posts yet.</p><p>Write your first entry in the admin panel.</p></div>';
+    return;
+  }
+
+  const swatches = ['sw1','sw2','sw3','sw4','sw5','sw6'];
+  container.innerHTML = posts.map((p, i) => {
+    const cover = p.cover_url
+      ? `<img class="post-cover" src="${p.cover_url}" alt="${p.title}" loading="lazy">`
+      : `<div class="post-cover-placeholder ${swatches[i%6]}" style="height:180px;border-radius:2px;margin-bottom:1.2rem;"></div>`;
+    const date = new Date(p.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+    const words = (p.body||'').split(' ').length;
+    const mins = Math.max(1, Math.round(words/200));
+    return `<div class="post-card" onclick="openPost(${p.id})">
+      ${cover}
+      <div class="post-tag">${p.tag||''}</div>
+      <h3>${p.title}</h3>
+      <p class="post-excerpt">${p.body||''}</p>
+      <div class="post-meta">${date} · ${mins} min read</div>
+    </div>`;
+  }).join('');
+}
+
+async function openPost(id) {
+  document.getElementById('blog').style.display = 'none';
+  document.getElementById('post-view').style.display = 'block';
+  document.getElementById('post-view').scrollIntoView({ behavior: 'smooth' });
+
+  const { data: p } = await sb.from('posts').select('*').eq('id', id).single();
+  if (!p) return;
+
+  document.getElementById('pv-tag').textContent = p.tag || '';
+  document.getElementById('pv-title').textContent = p.title;
+  const date = new Date(p.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+  const words = (p.body||'').split(' ').length;
+  document.getElementById('pv-meta').textContent = `${date} · ${Math.max(1,Math.round(words/200))} min read`;
+  if (p.cover_url) {
+    const img = document.getElementById('pv-cover');
+    img.src = p.cover_url;
+    img.style.display = 'block';
+  }
+  document.getElementById('pv-body').textContent = p.body || '';
+}
+
+function closePostView() {
+  document.getElementById('post-view').style.display = 'none';
+  document.getElementById('blog').style.display = 'block';
+}
+
+async function publishPost() { await savePost(true); }
+async function saveDraft() { await savePost(false); }
+
+async function savePost(published) {
+  const title = document.getElementById('post-title').value.trim();
+  const tag = document.getElementById('post-tag').value;
+  const body = document.getElementById('post-body').value.trim();
+  if (!title) { setStatus('post-status','error','Please add a title.'); return; }
+
+  setStatus('post-status','loading', published ? 'Publishing…' : 'Saving draft…');
+
+  let cover_url = null;
+  const coverFile = document.getElementById('post-cover-input').files[0];
+  if (coverFile) {
+    const ext = coverFile.name.split('.').pop();
+    const path = `posts/${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage.from('site-media').upload(path, coverFile);
+    if (!upErr) {
+      const { data: urlData } = sb.storage.from('site-media').getPublicUrl(path);
+      cover_url = urlData.publicUrl;
+    }
+  }
+
+  const payload = { title, tag, body, published };
+  if (cover_url) payload.cover_url = cover_url;
+
+  const { error } = await sb.from('posts').insert(payload);
+  if (error) { setStatus('post-status','error', error.message); return; }
+  setStatus('post-status','success', published ? 'Published!' : 'Draft saved!');
+  ['post-title','post-body'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('post-cover-input').value = '';
+  loadAdminPosts();
+}
+
+async function loadAdminPosts() {
+  const { data } = await sb.from('posts').select('*').order('created_at', { ascending: false });
+  const el = document.getElementById('admin-posts-list');
+  if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No posts yet.</p>'; return; }
+  el.innerHTML = data.map(p => {
+    const date = new Date(p.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    return `<div class="list-row">
+      <div class="info"><h4>${p.title}</h4><p>${date} · ${p.published?'Published':'Draft'}</p></div>
+      <div class="actions">
+        ${!p.published ? `<button class="btn btn-sm btn-ghost" onclick="publishExisting(${p.id})">Publish</button>` : ''}
+        <button class="btn btn-sm btn-danger" onclick="deletePost(${p.id})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function publishExisting(id) {
+  await sb.from('posts').update({ published: true }).eq('id', id);
+  loadAdminPosts();
+}
+
+async function deletePost(id) {
+  if (!confirm('Delete this post?')) return;
+  await sb.from('posts').delete().eq('id', id);
+  loadAdminPosts();
+}
+
+// ════════════════════════════════════════════
+// ADMIN UI
+// ════════════════════════════════════════════
+let currentUser = null;
+
+async function checkAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  currentUser = session?.user || null;
+}
+
+async function toggleAdmin() {
+  const panel = document.getElementById('admin-panel');
+  const open = panel.style.display === 'block';
+  if (open) { panel.style.display = 'none'; return; }
+
+  const { data: { session } } = await sb.auth.getSession();
+  currentUser = session?.user || null;
+
+  if (currentUser) {
+    openAdminPanel();
+  } else {
+    document.getElementById('admin-login').style.display = 'flex';
+  }
+}
+
+function openAdminPanel() {
+  document.getElementById('admin-login').style.display = 'none';
+  document.getElementById('admin-panel').style.display = 'block';
+  loadAdminAlbums();
+  loadPhotoAlbumSelect();
+  loadAdminPosts();
+}
+
+async function adminLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  setStatus('login-status', 'loading', 'Signing in…');
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { setStatus('login-status', 'error', error.message); return; }
+  currentUser = data.user;
+  openAdminPanel();
+}
+
+async function adminLogout() {
+  await sb.auth.signOut();
+  currentUser = null;
+  document.getElementById('admin-panel').style.display = 'none';
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function setStatus(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = 'status-msg ' + type;
+  el.textContent = msg;
+  if (type === 'success') setTimeout(() => el.style.display = 'none', 3000);
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  loadProfile();
+  checkAuth();
+  // Show portals on nav back
+  document.querySelector('a[href="#hero"]').addEventListener('click', () => {
+    showPortals();
+  });
+});
+</script>
+</body>
+</html>
