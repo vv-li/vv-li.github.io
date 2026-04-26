@@ -1195,6 +1195,7 @@ function showPortals() {
   document.getElementById('main-footer').style.display = 'flex';
 }
 
+
 // ════════════════════════════════════════════
 // PROFILE
 // ════════════════════════════════════════════
@@ -1366,6 +1367,12 @@ async function deleteAlbum(id) {
   loadPhotoAlbumSelect();
 }
 
+async function setCover(albumId, url) {
+  await sb.from('albums').update({ cover_url: url }).eq('id', albumId);
+  loadAdminPhotos(albumId);
+  loadAdminAlbums();
+}
+
 // ════════════════════════════════════════════
 // PHOTOS
 // ════════════════════════════════════════════
@@ -1415,14 +1422,25 @@ async function loadAdminPhotos(albumId) {
   const { data } = await sb.from('photos').select('*').eq('album_id', albumId).order('created_at', { ascending: false });
   const el = document.getElementById('admin-photos-list');
   if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No photos in this album yet.</p>'; return; }
-  el.innerHTML = data.map(ph => `
-    <div class="list-row">
+
+  // Get current cover url for this album
+  const { data: al } = await sb.from('albums').select('cover_url').eq('id', albumId).single();
+  const currentCover = al?.cover_url || null;
+
+  el.innerHTML = data.map(ph => {
+    const isCover = currentCover && ph.url && currentCover.split('?')[0] === ph.url.split('?')[0];
+    return `<div class="list-row">
       ${ph.url ? `<img class="thumb-preview" src="${ph.url}" alt="">` : '<div class="thumb-preview sw1"></div>'}
-      <div class="info" style="flex:1;min-width:0;"><h4 style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ph.caption || 'No caption'}</h4><p>Photo #${ph.id}</p></div>
+      <div class="info" style="flex:1;min-width:0;">
+        <h4 style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ph.caption || 'No caption'}</h4>
+        <p>${isCover ? '✓ Current cover' : 'Photo #' + ph.id}</p>
+      </div>
       <div class="actions">
+        ${!isCover ? `<button class="btn btn-sm btn-ghost" onclick="setCover(${albumId},'${esc(ph.url||'')}')">Set cover</button>` : ''}
         <button class="btn btn-sm btn-danger" onclick="deletePhoto(${ph.id},'${esc(ph.storage_path||'')}',${albumId})">×</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function deletePhoto(id, path, albumId) {
