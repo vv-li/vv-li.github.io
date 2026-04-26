@@ -116,8 +116,6 @@ nav {
   margin-bottom: 0.75rem;
 }
 
-.hero-name em { font-style: italic; color: var(--fern); }
-
 .hero-tagline {
   font-size: 12px;
   letter-spacing: 0.2em;
@@ -814,10 +812,19 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 <nav>
   <a class="nav-logo" href="#hero">Vivian Li</a>
   <ul class="nav-links">
-    <li><a href="#hero">Home</a></li>
-    <li><a href="#" onclick="showSection('photography')">Photography</a></li>
-    <li><a href="#" onclick="showSection('blog')">Journal</a></li>
-    <li><a href="#" onclick="toggleAdmin()" class="admin-link">Admin ↗</a></li>
+  	<li><a href="#hero">Home</a></li>
+  	<li><a href="#" onclick="showSection('photography')">Photography</a></li>
+  	<li><a href="#" onclick="showSection('blog')">Journal</a></li>
+  	<li>
+    	  <a href="https://instagram.com/vivlikesbirds" target="_blank" title="Instagram" style="display:flex;align-items:center;color:var(--stone);">
+      	    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="2" width="20" height="20" rx="5"/>
+              <circle cx="12" cy="12" r="4"/>
+              <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+            </svg>
+          </a>
+        </li>
+        <li><a href="#" onclick="toggleAdmin()" class="admin-link">Admin ↗</a></li>
   </ul>
 </nav>
 
@@ -850,7 +857,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     line-height: 1.7;
     color: var(--ink);
     margin-bottom: 1.5rem;
-  " id="whoami-text">Most days, I spend my time as an economist conducting research on labour markets and socioeconomic outcomes. Outside of that, the things that occupy my time the most are music, photography, reading, <a href="https://www.geoguessr.com/" target="_blank">learning geography</a>, and planning my next travel (and now, this site, I suppose). I have a fascination with people and places, and to gain persepctive across cultures, languages, geography and time is a purpose which I am privileged to pursue. In many ways, I hope my travels help shape me into a better person; to grow more patient and give grace, expand my musical palette, become a more well-practiced photographer, and a sharper economist when researching people-centered issues. I'd be honoured to share this journey with anyone who'd like to tag along (metaphysically, of course). </p>
+  " id="whoami-text">Most days, I spend my time as an economist conducting research on labour markets and socioeconomic outcomes. Outside of that, the things that occupy my time the most are music, photography, reading, <a href="https://www.geoguessr.com/" target="_blank">clicking maps</a>, and planning my next adventure (and now, this site, I suppose). I have a fascination with people and places, and to gain persepctive across cultures, languages, geography and time is a purpose which I am privileged to pursue. In many ways, I hope my travels help shape me into a better person; to grow more patient and give grace, expand my musical palette, appreciate nature, become a more well-practiced photographer, and a sharper economist when researching people-centered issues. I'd be honoured to share this journey with anyone who'd like to tag along (metaphysically, of course). </p>
 </section>
 
 <!-- ═══════════════════════════════════════
@@ -1027,9 +1034,9 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
           <input type="text" id="p-tagline" placeholder="Photographer & Writer">
         </div>
         <div class="field">
-          <label>Bio</label>
-          <textarea id="p-bio" placeholder="A short paragraph about you..."></textarea>
-        </div>
+  	  <label>Who am I</label>
+  	  <textarea id="p-bio" placeholder="Write your who am I section here..."></textarea>
+	</div>
         <button class="btn btn-md btn-primary" onclick="saveProfile()">Save profile</button>
         <div class="status-msg" id="profile-status"></div>
       </div>
@@ -1204,7 +1211,7 @@ async function loadProfile() {
     document.getElementById('p-tagline').value = data.tagline;
   }
   if (data.bio) {
-    document.getElementById('hero-bio').textContent = data.bio;
+    document.getElementById('whoami-text').textContent = data.bio;
     document.getElementById('p-bio').value = data.bio;
   }
   if (data.photo_url) {
