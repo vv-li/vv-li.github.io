@@ -908,6 +908,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     <div>
       <h1 id="album-view-title">Album title</h1>
       <div class="sub" id="album-view-meta"></div>
+      <p id="album-view-desc" style="display:none;font-size:15px;color:var(--stone);line-height:1.8;margin-top:0.75rem;max-width:60ch;"></p>
     </div>
     <button id="album-share-btn" class="btn btn-sm btn-ghost" style="margin-top:0.5rem;">Share ↗</button>
   </div>
@@ -1081,8 +1082,17 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
       </div>
       <div class="card">
         <h3>Your albums</h3>
-        <div id="admin-albums-list"><p style="font-size:13px;color:var(--stone);">Loading<span class="loading-dots"></span></p></div>
-      </div>
+  	<div id="admin-albums-list"></div>
+  	<div id="album-desc-editor" style="display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:0.5px solid var(--dusk);">
+    	   <p style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--stone);margin-bottom:0.75rem;">Editing: <strong id="desc-album-name"></strong></p>
+    	   <div class="field">
+     	     <label>Description</label>
+      	     <textarea id="desc-input" style="min-height:100px;" placeholder="A sentence or paragraph about this album..."></textarea>
+    	</div>
+    	<button class="btn btn-sm btn-primary" onclick="saveAlbumDesc()">Save</button>
+    	<div class="status-msg" id="desc-status"></div>
+  	</div>
+    </div>
     </div>
   </div>
 
@@ -1261,6 +1271,26 @@ async function uploadProfilePhoto(input) {
   loadProfile();
 }
 
+let descAlbumId = null;
+
+function editAlbumDesc(id, title, existing) {
+  descAlbumId = id;
+  document.getElementById('desc-album-name').textContent = title;
+  document.getElementById('desc-input').value = existing || '';
+  document.getElementById('album-desc-editor').style.display = 'block';
+  document.getElementById('desc-input').focus();
+}
+
+async function saveAlbumDesc() {
+  if (!descAlbumId) return;
+  const description = document.getElementById('desc-input').value.trim();
+  setStatus('desc-status', 'loading', 'Saving…');
+  const { error } = await sb.from('albums').update({ description }).eq('id', descAlbumId);
+  if (error) { setStatus('desc-status', 'error', error.message); return; }
+  setStatus('desc-status', 'success', 'Saved!');
+  loadAdminAlbums();
+}
+
 // ════════════════════════════════════════════
 // ALBUMS
 // ════════════════════════════════════════════
@@ -1298,6 +1328,10 @@ async function openAlbum(id, title, location, year) {
   document.getElementById('album-view').style.display = 'block';
   document.getElementById('album-view-title').textContent = title;
   document.getElementById('album-view-meta').textContent = [location, year].filter(Boolean).join(' · ');
+  const { data: alData } = await sb.from('albums').select('description').eq('id', id).single();
+  const desc = document.getElementById('album-view-desc');
+  desc.textContent = alData?.description || '';
+  desc.style.display = alData?.description ? 'block' : 'none';
 
   // Add share button to album header
   const shareBtn = document.getElementById('album-share-btn');
@@ -1367,12 +1401,13 @@ async function loadAdminAlbums() {
   const el = document.getElementById('admin-albums-list');
   if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No albums yet.</p>'; return; }
   el.innerHTML = data.map(al => `
-    <div class="list-row">
-      <div class="info"><h4>${al.title}</h4><p>${[al.location,al.year].filter(Boolean).join(' · ')||'No location set'}</p></div>
-      <div class="actions">
-        <button class="btn btn-sm btn-danger" onclick="deleteAlbum(${al.id})">Delete</button>
-      </div>
-    </div>`).join('');
+  <div class="list-row">
+    <div class="info"><h4>${al.title}</h4><p>${[al.location,al.year].filter(Boolean).join(' · ')||'No location set'}</p></div>
+    <div class="actions">
+      <button class="btn btn-sm btn-ghost" onclick="editAlbumDesc(${al.id},'${esc(al.title)}','${esc(al.description||'')}')">+ Description</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteAlbum(${al.id})">Delete</button>
+    </div>
+  </div>`).join('');
 }
 
 async function deleteAlbum(id) {
