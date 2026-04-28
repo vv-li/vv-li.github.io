@@ -1177,6 +1177,29 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ════════════════════════════════════════════
+// Cloudinary presets
+// ════════════════════════════════════════════
+
+const CLOUDINARY_CLOUD = 'dspmypvow';
+const CLOUDINARY_PRESET = 'tqrefltx';
+
+async function uploadToCloudinary(file, folder) {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('upload_preset', CLOUDINARY_PRESET);
+  form.append('folder', folder);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+    method: 'POST',
+    body: form
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.secure_url;
+}
+
+// ════════════════════════════════════════════
 // SECTION NAVIGATION
 // ════════════════════════════════════════════
 const allSections = ['photography','album-view','blog','post-view'];
@@ -1258,15 +1281,10 @@ async function uploadProfilePhoto(input) {
   if (!file) return;
   setStatus('photo-upload-status', 'loading', 'Uploading…');
 
-  const ext = file.name.split('.').pop();
-  const path = `profile/avatar.${ext}`;
-  const { error: upErr } = await sb.storage.from('site-media').upload(path, file, { upsert: true });
-  if (upErr) { setStatus('photo-upload-status', 'error', upErr.message); return; }
+  const url = await uploadToCloudinary(file, 'profile');
+  if (!url) { setStatus('photo-upload-status', 'error', 'Upload failed.'); return; }
 
-  const { data: urlData } = sb.storage.from('site-media').getPublicUrl(path);
-  const photo_url = urlData.publicUrl + '?t=' + Date.now();
-
-  await sb.from('profile').upsert({ id: 1, photo_url });
+  await sb.from('profile').upsert({ id: 1, photo_url: url });
   setStatus('photo-upload-status', 'success', 'Photo updated!');
   loadProfile();
 }
@@ -1445,17 +1463,12 @@ async function uploadPhotos(input) {
 
   let uploaded = 0;
   for (const file of files) {
-    const ext = file.name.split('.').pop();
-    const path = `photos/${albumId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error: upErr } = await sb.storage.from('site-media').upload(path, file);
-    if (upErr) { setStatus('photo-status','error', upErr.message); return; }
-
-    const { data: urlData } = sb.storage.from('site-media').getPublicUrl(path);
-    await sb.from('photos').insert({ album_id: albumId, url: urlData.publicUrl, caption, storage_path: path });
+    const url = await uploadToCloudinary(file, `albums/${albumId}`);
+    if (!url) { setStatus('photo-status','error','Upload failed on one or more photos.'); return; }
+    await sb.from('photos').insert({ album_id: albumId, url, caption });
     uploaded++;
   }
 
-  // Set first photo as album cover if none
   const { data: al } = await sb.from('albums').select('cover_url').eq('id', albumId).single();
   if (!al?.cover_url) {
     const { data: firstPh } = await sb.from('photos').select('url').eq('album_id', albumId).limit(1).single();
@@ -1609,11 +1622,7 @@ async function savePost(published) {
   if (coverFile) {
     const ext = coverFile.name.split('.').pop();
     const path = `posts/${Date.now()}.${ext}`;
-    const { error: upErr } = await sb.storage.from('site-media').upload(path, coverFile);
-    if (!upErr) {
-      const { data: urlData } = sb.storage.from('site-media').getPublicUrl(path);
-      cover_url = urlData.publicUrl;
-    }
+    cover_url = await uploadToCloudinary(coverFile, 'posts');
   }
 
   const payload = { title, tag, body, published };
