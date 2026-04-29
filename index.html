@@ -973,7 +973,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     line-height: 1.9;
     max-width: 80ch;
     margin: 0 auto;
-  "> This site and its contents were made possible through the extensive use of Lightroom, Github, Claude, and Supabase. And a special shoutout to my cat, Zooey, without whom nothing would be possible. </p>
+  "> This site and its contents were made possible through the extensive use of Lightroom, Github, Claude, Cloudinary, and Supabase. And a special shoutout to my cat, Zooey, without whom nothing would be possible. </p>
 </section>
 
 <footer id="main-footer">
@@ -1726,6 +1726,96 @@ function setStatus(id, type, msg) {
   if (type === 'success') setTimeout(() => el.style.display = 'none', 3000);
 }
 
+async function migrateToCloudinary() {
+  const log = document.getElementById('migrate-log');
+  const addLog = msg => { log.innerHTML += msg + '<br>'; log.scrollTop = log.scrollHeight; };
+
+  addLog('Starting migration...');
+
+  // ── Photos ────────────────────────────────
+  const { data: photos } = await sb.from('photos').select('id, url').like('url', '%supabase.co%');
+  addLog(`Found ${photos?.length || 0} photos to migrate`);
+
+  for (const ph of photos || []) {
+    try {
+      const blob = await fetch(ph.url).then(r => r.blob());
+      const file = new File([blob], 'photo.jpg', { type: blob.type });
+      const newUrl = await uploadToCloudinary(file, 'migrated/photos');
+      if (newUrl) {
+        await sb.from('photos').update({ url: newUrl }).eq('id', ph.id);
+        addLog(`✓ Photo ${ph.id} migrated`);
+      } else {
+        addLog(`✗ Photo ${ph.id} — Cloudinary returned no URL`);
+      }
+    } catch(e) {
+      addLog(`✗ Photo ${ph.id} failed: ${e.message}`);
+    }
+  }
+
+  // ── Album covers ──────────────────────────
+  const { data: albums } = await sb.from('albums').select('id, cover_url').like('cover_url', '%supabase.co%');
+  addLog(`Found ${albums?.length || 0} album covers to migrate`);
+
+  for (const al of albums || []) {
+    try {
+      const blob = await fetch(al.cover_url).then(r => r.blob());
+      const file = new File([blob], 'cover.jpg', { type: blob.type });
+      const newUrl = await uploadToCloudinary(file, 'migrated/covers');
+      if (newUrl) {
+        await sb.from('albums').update({ cover_url: newUrl }).eq('id', al.id);
+        addLog(`✓ Album ${al.id} cover migrated`);
+      } else {
+        addLog(`✗ Album ${al.id} — Cloudinary returned no URL`);
+      }
+    } catch(e) {
+      addLog(`✗ Album ${al.id} failed: ${e.message}`);
+    }
+  }
+
+  // ── Profile photo ─────────────────────────
+  const { data: profile } = await sb.from('profile').select('id, photo_url').single();
+  if (profile?.photo_url?.includes('supabase.co')) {
+    try {
+      const blob = await fetch(profile.photo_url).then(r => r.blob());
+      const file = new File([blob], 'avatar.jpg', { type: blob.type });
+      const newUrl = await uploadToCloudinary(file, 'migrated/profile');
+      if (newUrl) {
+        await sb.from('profile').update({ photo_url: newUrl }).eq('id', profile.id);
+        addLog('✓ Profile photo migrated');
+      } else {
+        addLog('✗ Profile photo — Cloudinary returned no URL');
+      }
+    } catch(e) {
+      addLog(`✗ Profile photo failed: ${e.message}`);
+    }
+  } else {
+    addLog('— Profile photo already on Cloudinary, skipping');
+  }
+
+  // ── Post covers ───────────────────────────
+  const { data: posts } = await sb.from('posts').select('id, cover_url');
+  const postsToMigrate = (posts || []).filter(p => p.cover_url?.includes('supabase.co'));
+  addLog(`Found ${postsToMigrate.length} post covers to migrate`);
+
+  for (const post of postsToMigrate) {
+    try {
+      const blob = await fetch(post.cover_url).then(r => r.blob());
+      const file = new File([blob], 'cover.jpg', { type: blob.type });
+      const newUrl = await uploadToCloudinary(file, 'migrated/posts');
+      if (newUrl) {
+        await sb.from('posts').update({ cover_url: newUrl }).eq('id', post.id);
+        addLog(`✓ Post ${post.id} cover migrated`);
+      } else {
+        addLog(`✗ Post ${post.id} — Cloudinary returned no URL`);
+      }
+    } catch(e) {
+      addLog(`✗ Post ${post.id} failed: ${e.message}`);
+    }
+  }
+
+  addLog('✓ Migration complete! Remove this button from your code.');
+}
+
 // ════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════
@@ -1749,5 +1839,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+
+<button onclick="migrateToCloudinary()" style="position:fixed;bottom:2rem;right:2rem;z-index:9999;padding:1rem;background:red;color:white;border:none;cursor:pointer;border-radius:4px;font-family:sans-serif;">Migrate to Cloudinary</button>
+
+<div id="migrate-log" style="position:fixed;bottom:5rem;right:2rem;z-index:9999;background:white;border:1px solid #ccc;padding:1rem;max-width:400px;max-height:300px;overflow-y:auto;font-size:12px;font-family:monospace;"></div>
+
 </body>
 </html>
