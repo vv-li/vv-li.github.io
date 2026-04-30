@@ -1308,8 +1308,8 @@ async function saveProfile() {
 
   if (error) { setStatus('profile-status', 'error', error.message); return; }
   setStatus('profile-status', 'success', 'Profile saved!');
+  await loadProfile();
   document.getElementById('p-bio').value = '';
-  loadProfile();
 }
 
 async function uploadProfilePhoto(input) {
@@ -1364,7 +1364,7 @@ async function loadAlbums() {
     const coverHTML = al.cover_url
       ? `<img class="album-cover" src="${al.cover_url}" alt="${al.title}" loading="lazy">`
       : `<div class="album-cover album-cover-placeholder ${swatches[i % 6]}">${al.title}</div>`;
-    return `<div class="album-card" onclick="openAlbum(${al.id}, '${esc(al.title)}', '${esc(al.location||'')}', '${esc(al.year||'')}')">
+    return `<div class="album-card" onclick="openAlbum(${al.id})">
       <div style="overflow:hidden;">${coverHTML}</div>
       <div class="album-info">
         <h3>${al.title}</h3>
@@ -1376,16 +1376,17 @@ async function loadAlbums() {
 
 function esc(s) { return (s||'').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
 
-async function openAlbum(id, title, location, year) {
+async function openAlbum(id) {
+  const { data: al } = await sb.from('albums').select('*').eq('id', id).single();
+  if (!al) return;
   window.location.hash = al.slug || 'album-' + id;
   document.getElementById('photography').style.display = 'none';
   document.getElementById('album-view').style.display = 'block';
-  document.getElementById('album-view-title').textContent = title;
-  document.getElementById('album-view-meta').textContent = [location, year].filter(Boolean).join(' · ');
-  const { data: alData } = await sb.from('albums').select('description').eq('id', id).single();
+  document.getElementById('album-view-title').textContent = al.title;
+  document.getElementById('album-view-meta').textContent = [al.location, al.year].filter(Boolean).join(' · ');
   const desc = document.getElementById('album-view-desc');
-  desc.textContent = alData?.description || '';
-  desc.style.display = alData?.description ? 'block' : 'none';
+  desc.textContent = al.description || '';
+  desc.style.display = al.description ? 'block' : 'none';
 
   // Add share button to album header
   const shareBtn = document.getElementById('album-share-btn');
@@ -1443,7 +1444,7 @@ async function createAlbum() {
 
   setStatus('album-status','loading','Creating album…');
   const slug = generateSlug(title);
-  const { error } = await sb.from('albums').insert({ title, location, year, description, map_url, slug });
+  const { error } = await sb.from('albums').insert({ title, location, year, description, slug });
   if (error) { setStatus('album-status','error', error.message); return; }
   setStatus('album-status','success','Album created!');
   ['al-title','al-location','al-year','al-desc'].forEach(id => document.getElementById(id).value = '');
@@ -1861,34 +1862,33 @@ function setStatus(id, type, msg) {
 // ════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════
-const hash = window.location.hash.replace('#', '');
-if (hash.startsWith('post-')) {
-  const postId = parseInt(hash.replace('post-', ''));
-  if (postId) { showSection('blog'); openPost(postId); }
-} else if (hash && !hash.startsWith('album-')) {
-  // Try to find post by slug
-  sb.from('posts').select('id').eq('slug', hash).single().then(({ data }) => {
-    if (data) { showSection('blog'); openPost(data.id); }
-  });
-} else if (hash.startsWith('album-')) {
-  const albumId = parseInt(hash.replace('album-', ''));
-  if (albumId) {
-    showSection('photography');
-    sb.from('albums').select('*').eq('id', albumId).single().then(({ data }) => {
-      if (data) openAlbum(data.id);
-    });
-  }
-} else if (hash) {
-  // Try to find album by slug
-  sb.from('albums').select('id').eq('slug', hash).single().then(({ data }) => {
-    if (data) {
+document.addEventListener('DOMContentLoaded', () => {
+  loadProfile();
+  checkAuth();
+
+  const hash = window.location.hash.replace('#', '');
+  if (hash.startsWith('post-')) {
+    const postId = parseInt(hash.replace('post-', ''));
+    if (postId) { showSection('blog'); openPost(postId); }
+  } else if (hash.startsWith('album-')) {
+    const albumId = parseInt(hash.replace('album-', ''));
+    if (albumId) {
       showSection('photography');
-      sb.from('albums').select('*').eq('id', data.id).single().then(({ data: al }) => {
-        if (al) openAlbum(al.id);
+      sb.from('albums').select('*').eq('id', albumId).single().then(({ data }) => {
+        if (data) openAlbum(data.id);
       });
     }
-  });
-}
+  } else if (hash) {
+    // Try post slug first
+    sb.from('posts').select('id').eq('slug', hash).single().then(({ data }) => {
+      if (data) { showSection('blog'); openPost(data.id); return; }
+      // Then try album slug
+      sb.from('albums').select('id').eq('slug', hash).single().then(({ data: al }) => {
+        if (al) { showSection('photography'); openAlbum(al.id); }
+      });
+    });
+  }
+});
 
 </script>
 </body>
