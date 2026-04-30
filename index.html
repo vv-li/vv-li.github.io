@@ -810,9 +810,8 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 
 <!-- NAV -->
 <nav>
-  <a class="nav-logo" href="#hero">Vivian Li</a>
   <ul class="nav-links">
-  	<li><a href="#hero">Home</a></li>
+  	<li><a href="#" onclick="showPortals(); window.scrollTo({top:0, behavior:'smooth'});">Home</a></li>
   	<li><a href="#" onclick="showSection('photography')">Photography</a></li>
   	<li><a href="#" onclick="showSection('blog')">Journal</a></li>
   	<li>
@@ -1301,6 +1300,7 @@ async function saveProfile() {
 
   if (error) { setStatus('profile-status', 'error', error.message); return; }
   setStatus('profile-status', 'success', 'Profile saved!');
+  document.getElementById('p-bio').value = '';
   loadProfile();
 }
 
@@ -1602,10 +1602,16 @@ async function loadPosts() {
       ${cover}
       <div class="post-tag">${p.tag||''}</div>
       <h3>${p.title}</h3>
-      <p class="post-excerpt">${p.body||''}</p>
+      <p class="post-excerpt">${stripHtml(p.body||'').slice(0,200).trim()}…</p>
       <div class="post-meta">${date} · ${mins} min read</div>
     </div>`;
   }).join('');
+}
+
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
 }
 
 async function openPost(id) {
