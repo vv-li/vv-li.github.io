@@ -1173,7 +1173,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbImage()">🖼 Image</button>
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('hr')">— Divider</button>
   </div>
-  <div id="post-body" contenteditable="true" style="
+  <div id="post-body" contenteditable="true" onpaste="cleanPaste(event)" style="
     min-height:240px;
     padding:0.75rem 1rem;
     border:0.5px solid var(--dusk);
@@ -1377,7 +1377,7 @@ async function loadAlbums() {
 function esc(s) { return (s||'').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
 
 async function openAlbum(id, title, location, year) {
-  window.location.hash = 'album-' + id;
+  window.location.hash = al.slug || 'album-' + id;
   document.getElementById('photography').style.display = 'none';
   document.getElementById('album-view').style.display = 'block';
   document.getElementById('album-view-title').textContent = title;
@@ -1442,7 +1442,8 @@ async function createAlbum() {
   if (!title) { setStatus('album-status','error','Please enter a title.'); return; }
 
   setStatus('album-status','loading','Creating album…');
-  const { error } = await sb.from('albums').insert({ title, location, year, description });
+  const slug = generateSlug(title);
+  const { error } = await sb.from('albums').insert({ title, location, year, description, map_url, slug });
   if (error) { setStatus('album-status','error', error.message); return; }
   setStatus('album-status','success','Album created!');
   ['al-title','al-location','al-year','al-desc'].forEach(id => document.getElementById(id).value = '');
@@ -1630,6 +1631,8 @@ async function openPost(id) {
   const { data: p } = await sb.from('posts').select('*').eq('id', id).single();
   if (!p) return;
 
+  window.location.hash = p.slug || 'post-' + id;  // ← move here, after fetch
+
   document.getElementById('pv-tag').textContent = p.tag || '';
   document.getElementById('pv-title').textContent = p.title;
   const date = new Date(p.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
@@ -1644,6 +1647,7 @@ async function openPost(id) {
 }
 
 function closePostView() {
+  history.pushState('', document.title, window.location.pathname);
   document.getElementById('post-view').style.display = 'none';
   document.getElementById('blog').style.display = 'block';
 }
@@ -1671,7 +1675,8 @@ async function savePost(published) {
     cover_url = await uploadToCloudinary(coverFile, 'posts');
   }
 
-  const payload = { title, tag, body, published };
+  const slug = generateSlug(title);
+  const payload = { title, tag, body, published, slug };
   if (cover_url) payload.cover_url = cover_url;
 
   let error;
@@ -1780,6 +1785,16 @@ function tbImage() {
   document.execCommand('insertHTML', false, `<img src="${url}" style="width:100%;border-radius:2px;margin:1.5rem 0;display:block;" alt="">`);
 }
 
+function cleanPaste(e) {
+  e.preventDefault();
+  const text = e.clipboardData.getData('text/plain');
+  const cleaned = text
+    .split(/\n\n+/)
+    .map(para => `<p>${para.trim()}</p>`)
+    .join('');
+  document.execCommand('insertHTML', false, cleaned);
+}
+
 // ════════════════════════════════════════════
 // ADMIN UI
 // ════════════════════════════════════════════
@@ -1846,25 +1861,35 @@ function setStatus(id, type, msg) {
 // ════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  loadProfile();
-  checkAuth();
-  document.querySelector('a[href="#hero"]').addEventListener('click', () => {
-    showPortals();
+const hash = window.location.hash.replace('#', '');
+if (hash.startsWith('post-')) {
+  const postId = parseInt(hash.replace('post-', ''));
+  if (postId) { showSection('blog'); openPost(postId); }
+} else if (hash && !hash.startsWith('album-')) {
+  // Try to find post by slug
+  sb.from('posts').select('id').eq('slug', hash).single().then(({ data }) => {
+    if (data) { showSection('blog'); openPost(data.id); }
   });
-
-  // Handle direct album links
-  const hash = window.location.hash;
-  if (hash.startsWith('#album-')) {
-    const albumId = parseInt(hash.replace('#album-', ''));
-    if (albumId) {
+} else if (hash.startsWith('album-')) {
+  const albumId = parseInt(hash.replace('album-', ''));
+  if (albumId) {
+    showSection('photography');
+    sb.from('albums').select('*').eq('id', albumId).single().then(({ data }) => {
+      if (data) openAlbum(data.id);
+    });
+  }
+} else if (hash) {
+  // Try to find album by slug
+  sb.from('albums').select('id').eq('slug', hash).single().then(({ data }) => {
+    if (data) {
       showSection('photography');
-      sb.from('albums').select('*').eq('id', albumId).single().then(({ data }) => {
-        if (data) openAlbum(data.id, data.title, data.location || '', data.year || '');
+      sb.from('albums').select('*').eq('id', data.id).single().then(({ data: al }) => {
+        if (al) openAlbum(al.id);
       });
     }
-  }
-});
+  });
+}
+
 </script>
 </body>
 </html>
