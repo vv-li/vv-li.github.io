@@ -971,7 +971,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     font-size: 11px;
     color: var(--stone);
     line-height: 1.9;
-    max-width: 80ch;
+    max-width: 90ch;
     margin: 0 auto;
   "> This site and its contents were made possible through the extensive use of Lightroom, Github, Claude, Cloudinary, and Supabase. And a special shoutout to my cat, Zooey, without whom nothing would be possible. </p>
 </section>
@@ -1126,12 +1126,13 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
   <!-- POSTS TAB -->
   <div class="admin-section" id="tab-posts">
     <div class="card" style="margin-bottom:2rem;">
-      <h3>New post</h3>
-      <div class="admin-grid" style="margin-bottom:1rem;">
-        <div class="field">
-          <label>Title</label>
-          <input type="text" id="post-title" placeholder="What is this about?">
-        </div>
+      <h3 id="post-editor-title">New post</h3>
+<input type="hidden" id="post-edit-id" value="">
+<div class="admin-grid" style="margin-bottom:1rem;">
+  <div class="field">
+    <label>Title</label>
+    <input type="text" id="post-title" placeholder="What is this about?">
+  </div>
         <div class="field">
           <label>Tag</label>
           <select id="post-tag">
@@ -1151,13 +1152,40 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
         </div>
       </div>
       <div class="field">
-        <label>Body</label>
-        <textarea id="post-body" style="min-height:200px;" placeholder="Write here..."></textarea>
-      </div>
-      <div style="display:flex;gap:1rem;">
-        <button class="btn btn-md btn-primary" onclick="publishPost()">Publish</button>
-        <button class="btn btn-md btn-ghost" onclick="saveDraft()">Save draft</button>
-      </div>
+  <label>Body</label>
+  <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.5rem;">
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('bold')"><strong>B</strong></button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('italic')"><em>I</em></button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('underline')" style="text-decoration:underline;">U</button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('h2')">H2</button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('h3')">H3</button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('ul')">• List</button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('ol')">1. List</button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('quote')">" Quote</button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbLink()">🔗 Link</button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbImage()">🖼 Image</button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('hr')">— Divider</button>
+  </div>
+  <div id="post-body" contenteditable="true" style="
+    min-height:240px;
+    padding:0.75rem 1rem;
+    border:0.5px solid var(--dusk);
+    border-radius:2px;
+    background:white;
+    font-family:'Karla',sans-serif;
+    font-size:14px;
+    font-weight:300;
+    color:var(--ink);
+    line-height:1.8;
+    outline:none;
+  " onfocus="this.style.borderColor='var(--fern)'" onblur="this.style.borderColor='var(--dusk)'"></div>
+  <p style="font-size:11px;color:var(--stone);margin-top:0.4rem;">Select text then click a button to format.</p>
+</div>
+<div style="display:flex;gap:1rem;flex-wrap:wrap;">
+  <button class="btn btn-md btn-primary" onclick="publishPost()">Publish</button>
+  <button class="btn btn-md btn-ghost" onclick="saveDraft()">Save draft</button>
+  <button class="btn btn-md btn-ghost" id="cancel-edit-btn" style="display:none;" onclick="cancelEdit()">Cancel edit</button>
+</div>
       <div class="status-msg" id="post-status"></div>
     </div>
     <div class="card">
@@ -1598,7 +1626,7 @@ async function openPost(id) {
     img.src = p.cover_url;
     img.style.display = 'block';
   }
-  document.getElementById('pv-body').textContent = p.body || '';
+  document.getElementById('pv-body').innerHTML = p.body || '';
 }
 
 function closePostView() {
@@ -1612,7 +1640,8 @@ async function saveDraft() { await savePost(false); }
 async function savePost(published) {
   const title = document.getElementById('post-title').value.trim();
   const tag = document.getElementById('post-tag').value;
-  const body = document.getElementById('post-body').value.trim();
+  const body = document.getElementById('post-body').innerHTML.trim();
+  const editId = document.getElementById('post-edit-id').value;
   if (!title) { setStatus('post-status','error','Please add a title.'); return; }
 
   setStatus('post-status','loading', published ? 'Publishing…' : 'Saving draft…');
@@ -1620,20 +1649,49 @@ async function savePost(published) {
   let cover_url = null;
   const coverFile = document.getElementById('post-cover-input').files[0];
   if (coverFile) {
-    const ext = coverFile.name.split('.').pop();
-    const path = `posts/${Date.now()}.${ext}`;
     cover_url = await uploadToCloudinary(coverFile, 'posts');
   }
 
   const payload = { title, tag, body, published };
   if (cover_url) payload.cover_url = cover_url;
 
-  const { error } = await sb.from('posts').insert(payload);
+  let error;
+  if (editId) {
+    ({ error } = await sb.from('posts').update(payload).eq('id', editId));
+  } else {
+    ({ error } = await sb.from('posts').insert(payload));
+  }
+
   if (error) { setStatus('post-status','error', error.message); return; }
   setStatus('post-status','success', published ? 'Published!' : 'Draft saved!');
-  ['post-title','post-body'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('post-cover-input').value = '';
+  clearPostEditor();
   loadAdminPosts();
+}
+
+function clearPostEditor() {
+  document.getElementById('post-title').value = '';
+  document.getElementById('post-body').innerHTML = '';
+  document.getElementById('post-cover-input').value = '';
+  document.getElementById('post-edit-id').value = '';
+  document.getElementById('post-editor-title').textContent = 'New post';
+  document.getElementById('cancel-edit-btn').style.display = 'none';
+}
+
+function cancelEdit() {
+  clearPostEditor();
+}
+
+async function editPost(id) {
+  const { data: p } = await sb.from('posts').select('*').eq('id', id).single();
+  if (!p) return;
+  document.getElementById('post-edit-id').value = p.id;
+  document.getElementById('post-title').value = p.title;
+  document.getElementById('post-tag').value = p.tag || 'Reflection';
+  document.getElementById('post-body').innerHTML = p.body || '';
+  document.getElementById('post-editor-title').textContent = 'Editing: ' + p.title;
+  document.getElementById('cancel-edit-btn').style.display = 'inline-block';
+  document.getElementById('post-status').style.display = 'none';
+  document.getElementById('tab-posts').scrollIntoView({ behavior: 'smooth' });
 }
 
 async function loadAdminPosts() {
@@ -1645,9 +1703,10 @@ async function loadAdminPosts() {
     return `<div class="list-row">
       <div class="info"><h4>${p.title}</h4><p>${date} · ${p.published?'Published':'Draft'}</p></div>
       <div class="actions">
-        ${!p.published ? `<button class="btn btn-sm btn-ghost" onclick="publishExisting(${p.id})">Publish</button>` : ''}
-        <button class="btn btn-sm btn-danger" onclick="deletePost(${p.id})">Delete</button>
-      </div>
+  <button class="btn btn-sm btn-ghost" onclick="editPost(${p.id})">Edit</button>
+  ${!p.published ? `<button class="btn btn-sm btn-ghost" onclick="publishExisting(${p.id})">Publish</button>` : ''}
+  <button class="btn btn-sm btn-danger" onclick="deletePost(${p.id})">Delete</button>
+</div>
     </div>`;
   }).join('');
 }
@@ -1661,6 +1720,45 @@ async function deletePost(id) {
   if (!confirm('Delete this post?')) return;
   await sb.from('posts').delete().eq('id', id);
   loadAdminPosts();
+}
+
+function tbFormat(type) {
+  const editor = document.getElementById('post-body');
+  editor.focus();
+  const sel = window.getSelection();
+  const selected = sel && sel.toString() ? sel.toString() : 'Your text here';
+  const tags = {
+    bold:      ['<strong>', '</strong>'],
+    italic:    ['<em>', '</em>'],
+    underline: ['<u>', '</u>'],
+    h2:        ['<h2>', '</h2>'],
+    h3:        ['<h3>', '</h3>'],
+    ul:        ['<ul><li>', '</li></ul>'],
+    ol:        ['<ol><li>', '</li></ol>'],
+    quote:     ['<blockquote style="border-left:3px solid var(--dusk);padding-left:1rem;color:var(--stone);font-style:italic;margin:1rem 0;">', '</blockquote>'],
+    hr:        ['<hr style="border:none;border-top:0.5px solid var(--dusk);margin:1.5rem 0;">', ''],
+  };
+  if (type === 'hr') { document.execCommand('insertHTML', false, tags.hr[0]); return; }
+  if (tags[type]) {
+    const [open, close] = tags[type];
+    document.execCommand('insertHTML', false, open + selected + close);
+  }
+}
+
+function tbLink() {
+  const url = prompt('Enter URL:');
+  if (!url) return;
+  const sel = window.getSelection();
+  const text = sel && sel.toString() ? sel.toString() : 'link text';
+  document.getElementById('post-body').focus();
+  document.execCommand('insertHTML', false, `<a href="${url}" target="_blank" style="color:var(--fern);">${text}</a>`);
+}
+
+function tbImage() {
+  const url = prompt('Enter image URL:');
+  if (!url) return;
+  document.getElementById('post-body').focus();
+  document.execCommand('insertHTML', false, `<img src="${url}" style="width:100%;border-radius:2px;margin:1.5rem 0;display:block;" alt="">`);
 }
 
 // ════════════════════════════════════════════
