@@ -528,12 +528,10 @@ nav {
 
 /* ── POST FULL VIEW ─────────────────────── */
 #post-view {
-  padding: 6rem 0 6rem;
+  padding: 6rem 3rem;
   display: none;
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
-  padding-left: 2rem;
-  padding-right: 2rem;
 }
 
 .post-view-back {
@@ -589,7 +587,17 @@ nav {
   font-size: 15px;
   line-height: 1.95;
   color: #2a2a28;
-  white-space: pre-wrap;
+}
+
+.post-full-body p,
+.post-full-body div {
+  margin: 0rem 0;
+  padding: 0;
+  min-height: 1em;
+}
+
+.post-full-body br + br {
+  display: none;
 }
 
 .post-full-body p { margin-bottom: 1.4rem; }
@@ -1646,7 +1654,12 @@ async function saveDraft() { await savePost(false); }
 async function savePost(published) {
   const title = document.getElementById('post-title').value.trim();
   const tag = document.getElementById('post-tag').value;
-  const body = document.getElementById('post-body').innerHTML.trim();
+  const raw = document.getElementById('post-body').innerHTML.trim();
+  const body = raw
+  .replace(/<div><br><\/div>/g, '<br>')
+  .replace(/<div>/g, '<p>')
+  .replace(/<\/div>/g, '</p>')
+  .replace(/(<br\s*\/?>\s*){3,}/g, '<br><br>');
   const editId = document.getElementById('post-edit-id').value;
   if (!title) { setStatus('post-status','error','Please add a title.'); return; }
 
