@@ -1624,6 +1624,16 @@ function stripHtml(html) {
   return tmp.textContent || tmp.innerText || '';
 }
 
+function generateSlug(title) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 50);
+}
+
 async function openPost(id) {
   document.getElementById('blog').style.display = 'none';
   document.getElementById('post-view').style.display = 'block';
@@ -1866,28 +1876,31 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProfile();
   checkAuth();
 
-  const hash = window.location.hash.replace('#', '');
-  if (hash.startsWith('post-')) {
-    const postId = parseInt(hash.replace('post-', ''));
-    if (postId) { showSection('blog'); openPost(postId); }
-  } else if (hash.startsWith('album-')) {
-    const albumId = parseInt(hash.replace('album-', ''));
-    if (albumId) {
+const hash = window.location.hash.replace('#', '');
+if (!hash) return;
+
+if (hash.startsWith('post-')) {
+  const postId = parseInt(hash.replace('post-', ''));
+  if (postId) { showSection('blog'); openPost(postId); }
+
+} else if (hash.startsWith('album-')) {
+  const albumId = parseInt(hash.replace('album-', ''));
+  if (albumId) { showSection('photography'); openAlbum(albumId); }
+
+} else {
+  Promise.all([
+    sb.from('posts').select('id').eq('slug', hash).maybeSingle(),
+    sb.from('albums').select('id').eq('slug', hash).maybeSingle()
+  ]).then(([postRes, albumRes]) => {
+    if (postRes.data) {
+      showSection('blog');
+      openPost(postRes.data.id);
+    } else if (albumRes.data) {
       showSection('photography');
-      sb.from('albums').select('*').eq('id', albumId).single().then(({ data }) => {
-        if (data) openAlbum(data.id);
-      });
+      openAlbum(albumRes.data.id);
     }
-  } else if (hash) {
-    // Try post slug first
-    sb.from('posts').select('id').eq('slug', hash).single().then(({ data }) => {
-      if (data) { showSection('blog'); openPost(data.id); return; }
-      // Then try album slug
-      sb.from('albums').select('id').eq('slug', hash).single().then(({ data: al }) => {
-        if (al) { showSection('photography'); openAlbum(al.id); }
-      });
-    });
-  }
+  });
+ }
 });
 
 </script>
