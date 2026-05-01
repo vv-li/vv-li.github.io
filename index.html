@@ -965,7 +965,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     Back
   </div>
   <div class="section-label"><span>Get in touch</span></div>
-  <h1 style="font-family:'Cormorant Garamond',serif;font-size:2.5rem;font-weight:300;margin-bottom:0.75rem;">Get in touch!</h1>
+  <h1 style="font-family:'Cormorant Garamond',serif;font-size:2.5rem;font-weight:300;margin-bottom:0.75rem;">I'd love to hear from you!</h1>
   <p style="font-size:14px;color:var(--stone);line-height:1.9;margin-bottom:1.5rem;">If you'd like to discuss or comment on anything you've seen on this page, please drop me a line!</p>
   <div class="field">
     <label>Your name</label>
@@ -995,51 +995,16 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
   </div>
 </div>
 
-<!-- FOOTER -->
-<section style="
-  border-top: 0.5px solid var(--dusk);
-  padding: 1rem;
-  text-align: center;
-">
-
-<!-- SPOTIFY -->
-<div style="
-  padding: 1rem 3rem;
-  border-top: 0.5px solid var(--dusk);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  align-items: center;
-">
+<!-- SPOTIFY + ACKNOWLEDGEMENTS -->
+<section style="border-top:0.5px solid var(--dusk);padding:1rem 3rem;display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items: center;">
   <div>
-    <p style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--stone);margin-bottom:1rem;">Currently listening</p>
-    <iframe
-      src="https://open.spotify.com/embed/track/4ByU5txrvIgKG0HxEaTDz5"
-      width="100%"
-      height="80"
-      frameborder="0"
-      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-      loading="lazy"
-      style="border-radius:8px;">
-    </iframe>
+  <p style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--stone);margin-bottom:0.25rem;text-align:center;">Currently listening</p>
+  <div id="spotify-embed-container"></div>
+</div>
+  <div style="text-align:center;">
+    <p style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--stone);margin-bottom:1rem;">Acknowledgements</p>
+    <p style="font-size:11px;color:var(--stone);line-height:1.9;max-width:90ch;margin:0 auto;">This site and its contents were made possible through the extensive use of Lightroom, Github, Claude, Cloudinary, and Supabase. And a special shoutout to my cat, Zooey, without whom nothing would be possible.</p>
   </div>
-  <div>
-    <p style="font-size:11px;letter-spacing:0.14e
-
-  <p style="
-    font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--stone);
-    margin-bottom: 1rem;
-  ">Acknowledgements</p>
-  <p style="
-    font-size: 11px;
-    color: var(--stone);
-    line-height: 1.9;
-    max-width: 90ch;
-    margin: 0 auto;
-  "> This site and its contents were made possible through the extensive use of Lightroom, Github, Claude, Cloudinary, and Supabase. And a special shoutout to my cat, Zooey, without whom nothing would be possible. </p>
 </section>
 
 <footer id="main-footer">
@@ -1103,6 +1068,10 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
           <label>Tagline</label>
           <input type="text" id="p-tagline" placeholder="Photographer & Writer">
         </div>
+	<div class="field">
+  	  <label>Spotify link</label>
+  	  <input type="text" id="p-spotify" placeholder="https://open.spotify.com/track/...">
+	</div>
         <div class="field">
   	  <label>Who am I</label>
   	  <textarea id="p-bio" placeholder="Write your who am I section here..."></textarea>
@@ -1343,6 +1312,17 @@ async function loadProfile() {
     document.getElementById('hero-tagline').textContent = data.tagline;
     document.getElementById('p-tagline').value = data.tagline;
   }
+  if (data.spotify_url) {
+    const embedUrl = data.spotify_url.includes('/embed/')
+      ? data.spotify_url
+      : data.spotify_url.replace('open.spotify.com/', 'open.spotify.com/embed/');
+    const el = document.getElementById('p-spotify');
+    if (el) el.value = data.spotify_url;
+    const container = document.getElementById('spotify-embed-container');
+    if (container) {
+      container.innerHTML = `<iframe src="${embedUrl}" width="100%" height="80" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius:8px;display:block;margin:0;"></iframe>`;
+    }
+  }
   if (data.bio) {
     document.getElementById('whoami-text').innerHTML = data.bio;
     document.getElementById('p-bio').value = data.bio;
@@ -1363,9 +1343,10 @@ async function saveProfile() {
   const name = document.getElementById('p-name').value;
   const tagline = document.getElementById('p-tagline').value;
   const bio = document.getElementById('p-bio').value;
+  const spotify_url = document.getElementById('p-spotify').value.trim();
 
   setStatus('profile-status', 'loading', 'Saving…');
-  const { error } = await sb.from('profile').upsert({ id: 1, name, tagline, bio });
+  const { error } = await sb.from('profile').upsert({ id: 1, name, tagline, bio, spotify_url });
 
   if (error) { setStatus('profile-status', 'error', error.message); return; }
   setStatus('profile-status', 'success', 'Profile saved!');
