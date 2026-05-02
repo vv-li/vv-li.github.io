@@ -1329,9 +1329,12 @@ async function loadProfile() {
   }
   if (data.photo_url) {
     const img = document.getElementById('profile-img');
-    img.src = data.photo_url;
-    img.style.display = 'block';
-    document.getElementById('profile-initials').style.display = 'none';
+    if (img) {
+      img.src = data.photo_url;
+      img.style.display = 'block';
+    }
+    const initials = document.getElementById('profile-initials');
+    if (initials) initials.style.display = 'none';
   }
 }
 
