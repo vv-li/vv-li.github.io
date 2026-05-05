@@ -1477,7 +1477,7 @@ function renderAlbumPhotos(photos) {
   grid.innerHTML = photos.map((ph, i) => {
     const h = heights[i % heights.length];
     const imgTag = ph.url
-      ? `<img src="${ph.url.replace('/upload/', '/upload/q_90,f_auto/')}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="lazy">`
+      ? `<img src="${ph.url.replace('/upload/', '/upload/q_85,f_auto/')}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="lazy">`
       : `<div class="${['sw1','sw2','sw3','sw4','sw5','sw6'][i%6]}" style="height:${h}px;"></div>`;
     return `<div class="photo-item" onclick="openLightbox(${i})">
       ${imgTag}
@@ -1630,7 +1630,7 @@ function openLightbox(idx) {
 
 function renderLightbox() {
   const ph = currentPhotos[currentLbIdx];
-  document.getElementById('lb-img').src = ph.url.replace('/upload/', '/upload/q_90,f_auto/');
+  document.getElementById('lb-img').src = ph.url.replace('/upload/', '/upload/q_85,f_auto/');
   document.getElementById('lb-caption').textContent = ph.caption || '';
   document.getElementById('lb-location').textContent = '';
 }
