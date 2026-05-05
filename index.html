@@ -1588,18 +1588,27 @@ async function loadAdminPhotos(albumId) {
 
   el.innerHTML = data.map(ph => {
     const isCover = currentCover && ph.url && currentCover.split('?')[0] === ph.url.split('?')[0];
-    return `<div class="list-row">
+    return `<div class="list-row" style="flex-wrap:wrap;gap:0.5rem;">
       ${ph.url ? `<img class="thumb-preview" src="${ph.url}" alt="">` : '<div class="thumb-preview sw1"></div>'}
       <div class="info" style="flex:1;min-width:0;">
-        <h4 style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ph.caption || 'No caption'}</h4>
-        <p>${isCover ? '✓ Current cover' : 'Photo #' + ph.id}</p>
+        <input type="text" id="caption-${ph.id}" value="${esc(ph.caption||'')}" placeholder="Add caption..."
+          style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid var(--dusk);border-radius:2px;font-family:'Karla',sans-serif;font-size:13px;background:var(--paper);color:var(--ink);outline:none;">
+        <p style="margin-top:0.25rem;">${isCover ? '✓ Current cover' : 'Photo #' + ph.id}</p>
       </div>
       <div class="actions">
-        ${!isCover ? `<button class="btn btn-sm btn-ghost" onclick="setCover(${albumId},'${esc(ph.url||'')}')">Set cover</button>` : ''}
+        <button class="btn btn-sm btn-ghost" onclick="savePhotoCaption(${ph.id},${albumId})">Save</button>
+        ${!isCover ? `<button class="btn btn-sm btn-ghost" onclick="setCover(${albumId},'${esc(ph.url||'')}')">Cover</button>` : ''}
         <button class="btn btn-sm btn-danger" onclick="deletePhoto(${ph.id},'${esc(ph.storage_path||'')}',${albumId})">×</button>
       </div>
     </div>`;
   }).join('');
+}
+
+async function savePhotoCaption(photoId, albumId) {
+  const caption = document.getElementById(`caption-${photoId}`).value.trim();
+  const { error } = await sb.from('photos').update({ caption }).eq('id', photoId);
+  if (error) { alert('Error saving caption: ' + error.message); return; }
+  loadAdminPhotos(albumId);
 }
 
 async function deletePhoto(id, path, albumId) {
