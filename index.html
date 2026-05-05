@@ -1419,7 +1419,7 @@ async function loadAlbums() {
   container.innerHTML = `<div class="albums-grid">${albums.map((al, i) => {
     const count = al.photos?.[0]?.count || 0;
     const coverHTML = al.cover_url
-      ? `<img class="album-cover" src="${al.cover_url}" alt="${al.title}" loading="lazy">`
+      ? `<img class="album-cover" src="${al.cover_url.replace('/upload/', '/upload/q_80,f_auto/')}" alt="" loading="lazy">`
       : `<div class="album-cover album-cover-placeholder ${swatches[i % 6]}">${al.title}</div>`;
     return `<div class="album-card" onclick="openAlbum(${al.id})">
       <div style="overflow:hidden;">${coverHTML}</div>
@@ -1477,7 +1477,7 @@ function renderAlbumPhotos(photos) {
   grid.innerHTML = photos.map((ph, i) => {
     const h = heights[i % heights.length];
     const imgTag = ph.url
-      ? `<img src="${ph.url}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="lazy">`
+      ? `<img src="${ph.url.replace('/upload/', '/upload/q_90,f_auto/')}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="lazy">`
       : `<div class="${['sw1','sw2','sw3','sw4','sw5','sw6'][i%6]}" style="height:${h}px;"></div>`;
     return `<div class="photo-item" onclick="openLightbox(${i})">
       ${imgTag}
@@ -1630,7 +1630,7 @@ function openLightbox(idx) {
 
 function renderLightbox() {
   const ph = currentPhotos[currentLbIdx];
-  document.getElementById('lb-img').src = ph.url || '';
+  document.getElementById('lb-img').src = ph.url.replace('/upload/', '/upload/q_90,f_auto/');
   document.getElementById('lb-caption').textContent = ph.caption || '';
   document.getElementById('lb-location').textContent = '';
 }
