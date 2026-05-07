@@ -1419,7 +1419,7 @@ async function loadAlbums() {
   container.innerHTML = `<div class="albums-grid">${albums.map((al, i) => {
     const count = al.photos?.[0]?.count || 0;
     const coverHTML = al.cover_url
-      ? `<img class="album-cover" src="${al.cover_url.replace('/upload/', '/upload/q_80,f_auto/')}" alt="" loading="lazy">`
+      ? `<img class="album-cover" src="${al.cover_url.replace('/upload/', '/upload/q_85,f_auto/')}" alt="" loading="lazy">`
       : `<div class="album-cover album-cover-placeholder ${swatches[i % 6]}">${al.title}</div>`;
     return `<div class="album-card" onclick="openAlbum(${al.id})">
       <div style="overflow:hidden;">${coverHTML}</div>
