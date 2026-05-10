@@ -907,6 +907,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 ════════════════════════════════════════ -->
 <section id="photography">
   <div class="section-label"><span>Photography</span></div>
+  <div id="album-tag-filters" style="display:flex;flex-wrap:wrap;gap:0.5rem;padding:0 3rem 1.5rem;"></div>
   <div id="albums-container">
     <div class="empty-state" id="albums-loading">
       <p class="loading-dots">Loading albums</p>
@@ -938,6 +939,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 ════════════════════════════════════════ -->
 <section id="blog">
   <div class="section-label"><span>Journal</span></div>
+  <div id="post-tag-filters" style="display:flex;flex-wrap:wrap;gap:0.5rem;padding:0 3rem 1.5rem;"></div>
   <div class="blog-posts-grid" id="posts-container">
     <div class="empty-state" id="posts-loading">
       <p class="loading-dots">Loading journal</p>
@@ -1121,12 +1123,16 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
   	<div id="album-desc-editor" style="display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:0.5px solid var(--dusk);">
     	   <p style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--stone);margin-bottom:0.75rem;">Editing: <strong id="desc-album-name"></strong></p>
     	   <div class="field">
-     	     <label>Description</label>
-      	     <textarea id="desc-input" style="min-height:100px;" placeholder="A sentence or paragraph about this album..."></textarea>
-    	</div>
-    	<button class="btn btn-sm btn-primary" onclick="saveAlbumDesc()">Save</button>
-    	<div class="status-msg" id="desc-status"></div>
-  	</div>
+  		<label>Description</label>
+  		<textarea id="al-desc" placeholder="A sentence or two about this trip..."></textarea>
+	   </div>
+	   <div class="field">
+  		<label>Tags</label>
+  		<input type="text" id="al-tags" placeholder="e.g. landscape, winter, Iceland (comma separated)">
+	   </div>
+	   <button class="btn btn-md btn-primary" onclick="createAlbum()">Create album</button>
+    	   <div class="status-msg" id="desc-status"></div>
+  	   </div>
     </div>
     </div>
   </div>
@@ -1178,6 +1184,10 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
             <option>Review</option>
           </select>
         </div>
+		<div class="field">
+			<label>Tags</label>
+			<input type="text" id="post-tags" placeholder="e.g. film, scotland, essay (comma separated)">
+	    </div>
       </div>
       <div class="field">
         <label>Cover image (optional)</label>
@@ -1231,6 +1241,44 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 </div>
 
 <script>
+
+function sanitize(html) {
+  if (!html) return '';
+  // Allow safe tags only
+  const allowed = {
+    tags: ['p','br','strong','em','u','h2','h3','ul','ol','li','blockquote','hr','a','img'],
+    attrs: { 'a': ['href','target','style'], 'img': ['src','alt','style'], '*': ['style'] }
+  };
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+
+  function clean(node) {
+    if (node.nodeType === 3) return; // text node, safe
+    if (node.nodeType === 1) {
+      const tag = node.tagName.toLowerCase();
+      if (!allowed.tags.includes(tag)) {
+        node.replaceWith(...node.childNodes);
+        return;
+      }
+      // Remove disallowed attributes
+      Array.from(node.attributes).forEach(attr => {
+        const allowedAttrs = [...(allowed.attrs[tag] || []), ...(allowed.attrs['*'] || [])];
+        if (!allowedAttrs.includes(attr.name)) {
+          node.removeAttribute(attr.name);
+        }
+        // Block javascript: in href/src
+        if ((attr.name === 'href' || attr.name === 'src') && attr.value.trim().toLowerCase().startsWith('javascript:')) {
+          node.removeAttribute(attr.name);
+        }
+      });
+    }
+    Array.from(node.childNodes).forEach(clean);
+  }
+
+  Array.from(tmp.childNodes).forEach(clean);
+  return tmp.innerHTML;
+}
+
 // ════════════════════════════════════════════
 // CONFIG — Replace with your Supabase values
 // ════════════════════════════════════════════
@@ -1317,7 +1365,7 @@ async function loadProfile() {
   if (!data) return;
 
   if (data.name) {
-    document.getElementById('hero-name').innerHTML = formatName(data.name);
+    document.getElementById('hero-name').innerHTML = sanitize(formatName(data.name));
     document.getElementById('p-name').value = data.name;
   }
   if (data.tagline) {
@@ -1336,7 +1384,7 @@ async function loadProfile() {
     }
   }
   if (data.bio) {
-    document.getElementById('whoami-text').innerHTML = data.bio;
+    document.getElementById('whoami-text').innerHTML = sanitize(data.bio);
     document.getElementById('p-bio').value = data.bio;
   }
   if (data.photo_url) {
@@ -1396,7 +1444,8 @@ async function saveAlbumDesc() {
   if (!descAlbumId) return;
   const description = document.getElementById('desc-input').value.trim();
   setStatus('desc-status', 'loading', 'Saving…');
-  const { error } = await sb.from('albums').update({ description }).eq('id', descAlbumId);
+  const tags = document.getElementById('al-tags').value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+  const { error } = await sb.from('albums').insert({ title, location, year, description, slug, tags });
   if (error) { setStatus('desc-status', 'error', error.message); return; }
   setStatus('desc-status', 'success', 'Saved!');
   loadAdminAlbums();
@@ -1405,30 +1454,55 @@ async function saveAlbumDesc() {
 // ════════════════════════════════════════════
 // ALBUMS
 // ════════════════════════════════════════════
+let activeAlbumTags = [];
+
 async function loadAlbums() {
   const { data: albums, error } = await sb.from('albums').select('*, photos(count)').order('created_at', { ascending: false });
   const container = document.getElementById('albums-container');
-
-  if (error) { container.innerHTML = `<div class="empty-state"><p>Error loading albums.</p></div>`; return; }
-  if (!albums || albums.length === 0) {
-    container.innerHTML = `<div class="empty-state"><p class="big">No albums yet.</p><p>Add your first album in the admin panel.</p></div>`;
+  if (error || !albums || albums.length === 0) {
+    container.innerHTML = `<div class="empty-state"><p class="big">No albums yet.</p></div>`;
     return;
   }
 
+  // Build tag filters
+  const allTags = [...new Set(albums.flatMap(al => al.tags || []))].sort();
+  const filterEl = document.getElementById('album-tag-filters');
+  filterEl.innerHTML = allTags.length ? [
+    `<button onclick="filterAlbums(null)" style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;padding:0.3rem 0.8rem;border-radius:20px;border:0.5px solid var(--dusk);background:${activeAlbumTags.length === 0 ? '#2c3a28' : 'transparent'};color:${activeAlbumTags.length === 0 ? '#faf8f4' : '#8a8880'};cursor:pointer;font-family:'Karla',sans-serif;">All</button>`,
+    ...allTags.map(tag => `<button onclick="filterAlbums('${tag}')" style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;padding:0.3rem 0.8rem;border-radius:20px;border:0.5px solid var(--dusk);background:${activeAlbumTags.includes(tag) ? '#2c3a28' : 'transparent'};color:${activeAlbumTags.includes(tag) ? '#faf8f4' : '#8a8880'};cursor:pointer;font-family:'Karla',sans-serif;">${tag}</button>`)
+  ].join('') : '';
+
+  // Filter albums
+  const filtered = activeAlbumTags.length ? albums.filter(al => activeAlbumTags.some(t => (al.tags || []).includes(t))) : albums;
+
   const swatches = ['sw1','sw2','sw3','sw4','sw5','sw6'];
-  container.innerHTML = `<div class="albums-grid">${albums.map((al, i) => {
+  container.innerHTML = `<div class="albums-grid">${filtered.map((al, i) => {
     const count = al.photos?.[0]?.count || 0;
     const coverHTML = al.cover_url
-      ? `<img class="album-cover" src="${al.cover_url.replace('/upload/', '/upload/q_85,f_auto/')}" alt="" loading="lazy">`
+      ? `<img class="album-cover" src="${al.cover_url}" alt="" loading="lazy">`
       : `<div class="album-cover album-cover-placeholder ${swatches[i % 6]}">${al.title}</div>`;
+    const meta = [al.location, al.year].filter(Boolean).join(' · ');
+    const tagPills = (al.tags || []).map(t => `<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fern);margin-right:0.4rem;">${t}</span>`).join('');
     return `<div class="album-card" onclick="openAlbum(${al.id})">
       <div style="overflow:hidden;">${coverHTML}</div>
       <div class="album-info">
         <h3>${al.title}</h3>
-        <div class="meta">${[al.location, al.year].filter(Boolean).join(' · ')}${count ? ' · ' + count + ' photo' + (count===1?'':'s') : ''}</div>
+        ${tagPills ? `<div style="margin:0.3rem 0;">${tagPills}</div>` : ''}
+        <div class="meta">${meta}${count ? ' · ' + count + ' photo' + (count===1?'':'s') : ''}</div>
       </div>
     </div>`;
   }).join('')}</div>`;
+}
+
+function filterAlbums(tag) {
+  if (tag === null) {
+    activeAlbumTags = [];
+  } else if (activeAlbumTags.includes(tag)) {
+    activeAlbumTags = activeAlbumTags.filter(t => t !== tag);
+  } else {
+    activeAlbumTags.push(tag);
+  }
+  loadAlbums();
 }
 
 function esc(s) { return (s||'').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
@@ -1477,7 +1551,7 @@ function renderAlbumPhotos(photos) {
   grid.innerHTML = photos.map((ph, i) => {
     const h = heights[i % heights.length];
     const imgTag = ph.url
-      ? `<img src="${ph.url.replace('/upload/', '/upload/q_85,f_auto/')}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="lazy">`
+      ? `<img src="${ph.url.replace('/upload/', '/upload/q_85/')}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="lazy">`
       : `<div class="${['sw1','sw2','sw3','sw4','sw5','sw6'][i%6]}" style="height:${h}px;"></div>`;
     return `<div class="photo-item" onclick="openLightbox(${i})">
       ${imgTag}
@@ -1504,7 +1578,7 @@ async function createAlbum() {
   const { error } = await sb.from('albums').insert({ title, location, year, description, slug });
   if (error) { setStatus('album-status','error', error.message); return; }
   setStatus('album-status','success','Album created!');
-  ['al-title','al-location','al-year','al-desc'].forEach(id => document.getElementById(id).value = '');
+  ['al-title','al-location','al-year','al-desc', 'al-tags'].forEach(id => document.getElementById(id).value = '');
   loadAdminAlbums();
   loadPhotoAlbumSelect();
 }
@@ -1630,7 +1704,7 @@ function openLightbox(idx) {
 
 function renderLightbox() {
   const ph = currentPhotos[currentLbIdx];
-  document.getElementById('lb-img').src = ph.url.replace('/upload/', '/upload/q_85,f_auto/');
+  document.getElementById('lb-img').src = ph.url.replace('/upload/', '/upload/q_85/');
   document.getElementById('lb-caption').textContent = ph.caption || '';
   document.getElementById('lb-location').textContent = '';
 }
@@ -1658,30 +1732,56 @@ document.getElementById('lightbox').addEventListener('click', function(e) {
 // ════════════════════════════════════════════
 // BLOG POSTS
 // ════════════════════════════════════════════
+let activePostTags = [];
+
 async function loadPosts() {
   const { data: posts } = await sb.from('posts').select('*').eq('published', true).order('created_at', { ascending: false });
   const container = document.getElementById('posts-container');
   if (!posts || !posts.length) {
-    container.innerHTML = '<div class="empty-state"><p class="big">No posts yet.</p><p>Write your first entry in the admin panel.</p></div>';
+    container.innerHTML = '<div class="empty-state"><p class="big">No posts yet.</p></div>';
     return;
   }
 
+  // Build tag filters
+  const allTags = [...new Set(posts.flatMap(p => p.tags || []))].sort();
+  const filterEl = document.getElementById('post-tag-filters');
+  filterEl.innerHTML = allTags.length ? [
+	`<button onclick="filterPosts(null)" style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;padding:0.3rem 0.8rem;border-radius:20px;border:0.5px solid var(--dusk);background:${activePostTags.length === 0 ? '#2c3a28' : 'transparent'};color:${activePostTags.length === 0 ? '#faf8f4' : '#8a8880'};cursor:pointer;font-family:'Karla',sans-serif;">All</button>`,
+	...allTags.map(tag => `<button onclick="filterPosts('${tag}')" style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;padding:0.3rem 0.8rem;border-radius:20px;border:0.5px solid var(--dusk);background:${activePostTags.includes(tag) ? '#2c3a28' : 'transparent'};color:${activePostTags.includes(tag) ? '#faf8f4' : '#8a8880'};cursor:pointer;font-family:'Karla',sans-serif;">${tag}</button>`)
+  ].join('') : '';
+
+  // Filter posts
+  const filtered = activePostTags.length ? posts.filter(p => activePostTags.some(t => (p.tags || []).includes(t))) : posts;
+
   const swatches = ['sw1','sw2','sw3','sw4','sw5','sw6'];
-  container.innerHTML = posts.map((p, i) => {
+  container.innerHTML = filtered.map((p, i) => {
     const cover = p.cover_url
       ? `<img class="post-cover" src="${p.cover_url}" alt="${p.title}" loading="lazy">`
       : `<div class="post-cover-placeholder ${swatches[i%6]}" style="height:180px;border-radius:2px;margin-bottom:1.2rem;"></div>`;
     const date = new Date(p.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-    const words = (p.body||'').split(' ').length;
+    const words = stripHtml(p.body||'').split(' ').length;
     const mins = Math.max(1, Math.round(words/200));
+    const tagPills = (p.tags || []).map(t => `<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fern);margin-right:0.4rem;">${t}</span>`).join('');
     return `<div class="post-card" onclick="openPost(${p.id})">
       ${cover}
       <div class="post-tag">${p.tag||''}</div>
       <h3>${p.title}</h3>
+      ${tagPills ? `<div style="margin:0.3rem 0 0.5rem;">${tagPills}</div>` : ''}
       <p class="post-excerpt">${stripHtml(p.body||'').slice(0,200).trim()}…</p>
       <div class="post-meta">${date} · ${mins} min read</div>
     </div>`;
   }).join('');
+}
+
+function filterPosts(tag) {
+  if (tag === null) {
+    activePostTags = [];
+  } else if (activePostTags.includes(tag)) {
+    activePostTags = activePostTags.filter(t => t !== tag);
+  } else {
+    activePostTags.push(tag);
+  }
+  loadPosts();
 }
 
 function stripHtml(html) {
@@ -1720,7 +1820,7 @@ async function openPost(id) {
     img.src = p.cover_url;
     img.style.display = 'block';
   }
-  document.getElementById('pv-body').innerHTML = p.body || '';
+  document.getElementById('pv-body').innerHTML = sanitize(p.body || '');
 }
 
 function closePostView() {
@@ -1742,6 +1842,7 @@ async function savePost(published) {
   .replace(/<\/div>/g, '</p>')
   .replace(/(<br\s*\/?>\s*){3,}/g, '<br><br>');
   const editId = document.getElementById('post-edit-id').value;
+  const postTags = document.getElementById('post-tags').value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
   if (!title) { setStatus('post-status','error','Please add a title.'); return; }
 
   setStatus('post-status','loading', published ? 'Publishing…' : 'Saving draft…');
@@ -1753,7 +1854,7 @@ async function savePost(published) {
   }
 
   const slug = generateSlug(title);
-  const payload = { title, tag, body, published, slug };
+  const payload = { title, tag, body, published, slug, tags };
   if (cover_url) payload.cover_url = cover_url;
 
   let error;
@@ -1776,6 +1877,7 @@ function clearPostEditor() {
   document.getElementById('post-edit-id').value = '';
   document.getElementById('post-editor-title').textContent = 'New post';
   document.getElementById('cancel-edit-btn').style.display = 'none';
+  document.getElementById('post-tags').value = '';
 }
 
 function cancelEdit() {
@@ -1789,6 +1891,7 @@ async function editPost(id) {
   document.getElementById('post-title').value = p.title;
   document.getElementById('post-tag').value = p.tag || 'Reflection';
   document.getElementById('post-body').innerHTML = p.body || '';
+  document.getElementById('post-tags').value = (p.tags || []).join(', ');
   document.getElementById('post-editor-title').textContent = 'Editing: ' + p.title;
   document.getElementById('cancel-edit-btn').style.display = 'inline-block';
   document.getElementById('post-status').style.display = 'none';
