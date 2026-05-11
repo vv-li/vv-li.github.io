@@ -989,12 +989,13 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 <div id="lightbox">
   <button class="lightbox-close" onclick="closeLightbox()">×</button>
   <button class="lightbox-nav" id="lb-prev" onclick="lbNav(-1)">‹</button>
-  <img class="lightbox-img" id="lb-img" src="" alt="">
-  <button class="lightbox-nav" id="lb-next" onclick="lbNav(1)">›</button>
-  <div class="lightbox-caption">
-    <p id="lb-caption"></p>
-    <small id="lb-location"></small>
+  <div style="display:flex;flex-direction:column;align-items:center;max-width:80vw;">
+    <img class="lightbox-img" id="lb-img" src="" alt="" style="max-height:80vh;">
+    <div id="lb-caption-bar" style="display:none;margin-top:0.75rem;">
+      <p id="lb-caption" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1rem;color:#f4f2ed;margin:0;background:#1a2535;padding:0.4rem 1rem;border-radius:3px;text-align:center;"></p>
+    </div>
   </div>
+  <button class="lightbox-nav" id="lb-next" onclick="lbNav(1)">›</button>
 </div>
 
 <!-- SPOTIFY + ACKNOWLEDGEMENTS -->
@@ -1672,10 +1673,37 @@ async function loadAdminPhotos(albumId) {
       <div class="actions">
         <button class="btn btn-sm btn-ghost" onclick="savePhotoCaption(${ph.id},${albumId})">Save</button>
         ${!isCover ? `<button class="btn btn-sm btn-ghost" onclick="setCover(${albumId},'${esc(ph.url||'')}')">Cover</button>` : ''}
+        <button class="btn btn-sm btn-ghost" onclick="document.getElementById('replace-input-${ph.id}').click()">Replace</button>
+        <input type="file" id="replace-input-${ph.id}" accept="image/*" style="display:none;" onchange="replacePhoto(${ph.id},${albumId},this)">
         <button class="btn btn-sm btn-danger" onclick="deletePhoto(${ph.id},'${esc(ph.storage_path||'')}',${albumId})">×</button>
       </div>
     </div>`;
   }).join('');
+}
+
+async function replacePhoto(photoId, albumId, input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const { data: original } = await sb.from('photos').select('created_at, caption').eq('id', photoId).single();
+
+  setStatus('photo-status', 'loading', 'Replacing photo…');
+
+  const newUrl = await uploadToCloudinary(file, `albums/${albumId}`);
+  if (!newUrl) { setStatus('photo-status', 'error', 'Upload failed.'); return; }
+
+  const { error } = await sb.from('photos').update({
+    url: newUrl,
+    storage_path: null,
+    created_at: original.created_at,
+    caption: original.caption
+  }).eq('id', photoId);
+
+  if (error) { setStatus('photo-status', 'error', error.message); return; }
+
+  setStatus('photo-status', 'success', 'Photo replaced!');
+  input.value = '';
+  loadAdminPhotos(albumId);
 }
 
 async function savePhotoCaption(photoId, albumId) {
@@ -1704,9 +1732,15 @@ function openLightbox(idx) {
 
 function renderLightbox() {
   const ph = currentPhotos[currentLbIdx];
-  document.getElementById('lb-img').src = ph.url.replace('/upload/', '/upload/q_85/');
-  document.getElementById('lb-caption').textContent = ph.caption || '';
-  document.getElementById('lb-location').textContent = '';
+  document.getElementById('lb-img').src = ph.url.replace('/upload/', '/upload/q_85/') || '';
+  const captionBar = document.getElementById('lb-caption-bar');
+  const captionEl = document.getElementById('lb-caption');
+  if (ph.caption) {
+    captionEl.textContent = ph.caption;
+    captionBar.style.display = 'block';
+  } else {
+    captionBar.style.display = 'none';
+  }
 }
 
 function closeLightbox() {
