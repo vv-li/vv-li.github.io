@@ -1316,8 +1316,8 @@ async function uploadToR2(file, folder) {
 	method: 'POST',
 	body: form,
 	headers: {
-    'X-Upload-Token': ''
-  }
+	'X-Upload-Token': UPLOAD_TOKEN || ''
+}
 });
   }
 }
