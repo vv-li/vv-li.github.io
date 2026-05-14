@@ -1284,6 +1284,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+let UPLOAD_TOKEN = null;
+
 // ════════════════════════════════════════════
 // Cloudflare upload
 // ════════════════════════════════════════════
@@ -2035,6 +2037,9 @@ function openAdminPanel() {
   loadAdminAlbums();
   loadPhotoAlbumSelect();
   loadAdminPosts();
+  // Fetch upload token
+  sb.from('secrets').select('value').eq('key', 'upload_token').single()
+    .then(({ data }) => { if (data) UPLOAD_TOKEN = data.value; });
 }
 
 async function adminLogin() {
