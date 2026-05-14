@@ -2098,77 +2098,6 @@ async function sendContact() {
   }
 }
 
-async function migrateToR2() {
-  const log = document.getElementById('r2-migrate-log');
-  const addLog = msg => { log.innerHTML += msg + '<br>'; log.scrollTop = log.scrollHeight; };
-
-  addLog('Starting migration to R2...');
-
-  // Migrate photos
-  const { data: photos } = await sb.from('photos').select('id, url').like('url', '%cloudinary%');
-  addLog(`Found ${photos?.length || 0} photos`);
-
-  for (const ph of photos || []) {
-    try {
-      const blob = await fetch(ph.url).then(r => r.blob());
-      const file = new File([blob], 'photo.jpg', { type: blob.type });
-      const newUrl = await uploadToR2(file, 'migrated/photos');
-      if (newUrl) {
-        await sb.from('photos').update({ url: newUrl }).eq('id', ph.id);
-        addLog(`✓ Photo ${ph.id}`);
-      }
-    } catch(e) { addLog(`✗ Photo ${ph.id}: ${e.message}`); }
-  }
-
-  // Migrate album covers
-  const { data: albums } = await sb.from('albums').select('id, cover_url').like('cover_url', '%cloudinary%');
-  addLog(`Found ${albums?.length || 0} album covers`);
-
-  for (const al of albums || []) {
-    try {
-      const blob = await fetch(al.cover_url).then(r => r.blob());
-      const file = new File([blob], 'cover.jpg', { type: blob.type });
-      const newUrl = await uploadToR2(file, 'migrated/covers');
-      if (newUrl) {
-        await sb.from('albums').update({ cover_url: newUrl }).eq('id', al.id);
-        addLog(`✓ Album ${al.id} cover`);
-      }
-    } catch(e) { addLog(`✗ Album ${al.id}: ${e.message}`); }
-  }
-
-  // Migrate profile photo
-  const { data: profile } = await sb.from('profile').select('id, photo_url').single();
-  if (profile?.photo_url?.includes('cloudinary')) {
-    try {
-      const blob = await fetch(profile.photo_url).then(r => r.blob());
-      const file = new File([blob], 'avatar.jpg', { type: blob.type });
-      const newUrl = await uploadToR2(file, 'migrated/profile');
-      if (newUrl) {
-        await sb.from('profile').update({ photo_url: newUrl }).eq('id', profile.id);
-        addLog('✓ Profile photo');
-      }
-    } catch(e) { addLog(`✗ Profile: ${e.message}`); }
-  }
-
-  // Migrate post covers
-  const { data: posts } = await sb.from('posts').select('id, cover_url').like('cover_url', '%cloudinary%');
-  addLog(`Found ${posts?.length || 0} post covers`);
-
-  for (const post of (posts || []).filter(p => p.cover_url)) {
-    try {
-      const blob = await fetch(post.cover_url).then(r => r.blob());
-      const file = new File([blob], 'cover.jpg', { type: blob.type });
-      const newUrl = await uploadToR2(file, 'migrated/posts');
-      if (newUrl) {
-        await sb.from('posts').update({ cover_url: newUrl }).eq('id', post.id);
-        addLog(`✓ Post ${post.id}`);
-      }
-    } catch(e) { addLog(`✗ Post ${post.id}: ${e.message}`); }
-  }
-
-  addLog('✓ Migration complete! Remove this button.');
-}
-
 // ════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════
@@ -2204,7 +2133,5 @@ if (hash.startsWith('post-')) {
 });
 
 </script>
-<button onclick="migrateToR2()" style="position:fixed;bottom:2rem;right:2rem;z-index:9999;padding:1rem;background:blue;color:white;border:none;cursor:pointer;border-radius:4px;">Migrate to R2</button>
-<div id="r2-migrate-log" style="position:fixed;bottom:5rem;right:2rem;z-index:9999;background:white;border:1px solid #ccc;padding:1rem;max-width:400px;max-height:300px;overflow-y:auto;font-size:12px;font-family:monospace;"></div>
 </body>
 </html>
