@@ -1006,7 +1006,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 </div>
   <div style="text-align:center;">
     <p style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--stone);margin-bottom:1rem;">Acknowledgements</p>
-    <p style="font-size:11px;color:var(--stone);line-height:1.9;max-width:90ch;margin:0 auto;">This site and its contents were made possible through the extensive use of Lightroom, Github, Claude, Cloudinary, and Supabase. And a special shoutout to my cat, Zooey, without whom nothing would be possible.</p>
+    <p style="font-size:11px;color:var(--stone);line-height:1.9;max-width:90ch;margin:0 auto;">This site and its contents were made possible through the extensive use of Lightroom, Github, Claude, Cloudflare, and Supabase. And a special shoutout to my cat, Zooey, without whom nothing would be possible.</p>
   </div>
 </section>
 
@@ -1125,15 +1125,10 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     	   <p style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--stone);margin-bottom:0.75rem;">Editing: <strong id="desc-album-name"></strong></p>
     	   <div class="field">
   		<label>Description</label>
-  		<textarea id="al-desc" placeholder="A sentence or two about this trip..."></textarea>
+  		<textarea id="desc-input" placeholder="A sentence or two about this album..."></textarea>
 	   </div>
-	   <div class="field">
-  		<label>Tags</label>
-  		<input type="text" id="al-tags" placeholder="e.g. landscape, winter, Iceland (comma separated)">
-	   </div>
-	   <button class="btn btn-md btn-primary" onclick="createAlbum()">Create album</button>
+	   <button class="btn btn-sm btn-primary" onclick="saveAlbumDesc()">Save</button>
     	   <div class="status-msg" id="desc-status"></div>
-  	   </div>
     </div>
     </div>
   </div>
@@ -1242,6 +1237,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 </div>
 
 <script>
+const R2_WORKER_URL = 'https://upload-handler.vivian-li7.workers.dev/';
 
 function sanitize(html) {
   if (!html) return '';
@@ -1289,37 +1285,37 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ════════════════════════════════════════════
-// Cloudinary presets
+// Cloudflare upload
 // ════════════════════════════════════════════
 
-const CLOUDINARY_CLOUD = 'dspmypvow';
-const CLOUDINARY_PRESET = 'tqrefltx';
-
-async function uploadToCloudinary(file, folder) {
+async function uploadToR2(file, folder) {
   const form = new FormData();
   form.append('file', file);
-  form.append('upload_preset', CLOUDINARY_PRESET);
   form.append('folder', folder);
 
   try {
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+    const res = await fetch(R2_WORKER_URL, {
       method: 'POST',
-      body: form,
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      }
+      body: form
     });
 
     if (!res.ok) {
       const err = await res.json();
-      console.error('Cloudinary error:', err.error?.message);
+      console.error('R2 upload error:', err);
       return null;
     }
     const data = await res.json();
-    return data.secure_url;
+    return data.url;
   } catch(e) {
     console.error('Upload failed:', e.message);
     return null;
+  const res = await fetch(R2_WORKER_URL, {
+	method: 'POST',
+	body: form,
+	headers: {
+    'X-Upload-Token': '3RuedXCWsvMVKRwu0i5cYg0'
+  }
+});
   }
 }
 
@@ -1423,7 +1419,7 @@ async function uploadProfilePhoto(input) {
   if (!file) return;
   setStatus('photo-upload-status', 'loading', 'Uploading…');
 
-  const url = await uploadToCloudinary(file, 'profile');
+  const url = await uploadToR2(file, 'profile');
   if (!url) { setStatus('photo-upload-status', 'error', 'Upload failed.'); return; }
 
   await sb.from('profile').upsert({ id: 1, photo_url: url });
@@ -1445,8 +1441,7 @@ async function saveAlbumDesc() {
   if (!descAlbumId) return;
   const description = document.getElementById('desc-input').value.trim();
   setStatus('desc-status', 'loading', 'Saving…');
-  const tags = document.getElementById('al-tags').value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-  const { error } = await sb.from('albums').insert({ title, location, year, description, slug, tags });
+  const { error } = await sb.from('albums').update({ description }).eq('id', descAlbumId);
   if (error) { setStatus('desc-status', 'error', error.message); return; }
   setStatus('desc-status', 'success', 'Saved!');
   loadAdminAlbums();
@@ -1552,7 +1547,7 @@ function renderAlbumPhotos(photos) {
   grid.innerHTML = photos.map((ph, i) => {
     const h = heights[i % heights.length];
     const imgTag = ph.url
-      ? `<img src="${ph.url.replace('/upload/', '/upload/q_85/')}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="lazy">`
+      ? `<img src="${ph.url}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="lazy">`
       : `<div class="${['sw1','sw2','sw3','sw4','sw5','sw6'][i%6]}" style="height:${h}px;"></div>`;
     return `<div class="photo-item" onclick="openLightbox(${i})">
       ${imgTag}
@@ -1633,7 +1628,7 @@ async function uploadPhotos(input) {
 
   let uploaded = 0;
   for (const file of files) {
-    const url = await uploadToCloudinary(file, `albums/${albumId}`);
+    const url = await uploadToR2(file, `albums/${albumId}`);
     if (!url) { setStatus('photo-status','error','Upload failed on one or more photos.'); return; }
     await sb.from('photos').insert({ album_id: albumId, url, caption });
     uploaded++;
@@ -1689,7 +1684,7 @@ async function replacePhoto(photoId, albumId, input) {
 
   setStatus('photo-status', 'loading', 'Replacing photo…');
 
-  const newUrl = await uploadToCloudinary(file, `albums/${albumId}`);
+  const newUrl = await uploadToR2(file, `albums/${albumId}`);
   if (!newUrl) { setStatus('photo-status', 'error', 'Upload failed.'); return; }
 
   const { error } = await sb.from('photos').update({
@@ -1732,7 +1727,7 @@ function openLightbox(idx) {
 
 function renderLightbox() {
   const ph = currentPhotos[currentLbIdx];
-  document.getElementById('lb-img').src = ph.url.replace('/upload/', '/upload/q_85/') || '';
+  document.getElementById('lb-img').src = ph.url.replace('/upload/') || '';
   const captionBar = document.getElementById('lb-caption-bar');
   const captionEl = document.getElementById('lb-caption');
   if (ph.caption) {
@@ -1884,7 +1879,7 @@ async function savePost(published) {
   let cover_url = null;
   const coverFile = document.getElementById('post-cover-input').files[0];
   if (coverFile) {
-    cover_url = await uploadToCloudinary(coverFile, 'posts');
+    cover_url = await uploadToR2(coverFile, 'posts');
   }
 
   const slug = generateSlug(title);
@@ -2098,6 +2093,77 @@ async function sendContact() {
   }
 }
 
+async function migrateToR2() {
+  const log = document.getElementById('r2-migrate-log');
+  const addLog = msg => { log.innerHTML += msg + '<br>'; log.scrollTop = log.scrollHeight; };
+
+  addLog('Starting migration to R2...');
+
+  // Migrate photos
+  const { data: photos } = await sb.from('photos').select('id, url').like('url', '%cloudinary%');
+  addLog(`Found ${photos?.length || 0} photos`);
+
+  for (const ph of photos || []) {
+    try {
+      const blob = await fetch(ph.url).then(r => r.blob());
+      const file = new File([blob], 'photo.jpg', { type: blob.type });
+      const newUrl = await uploadToR2(file, 'migrated/photos');
+      if (newUrl) {
+        await sb.from('photos').update({ url: newUrl }).eq('id', ph.id);
+        addLog(`✓ Photo ${ph.id}`);
+      }
+    } catch(e) { addLog(`✗ Photo ${ph.id}: ${e.message}`); }
+  }
+
+  // Migrate album covers
+  const { data: albums } = await sb.from('albums').select('id, cover_url').like('cover_url', '%cloudinary%');
+  addLog(`Found ${albums?.length || 0} album covers`);
+
+  for (const al of albums || []) {
+    try {
+      const blob = await fetch(al.cover_url).then(r => r.blob());
+      const file = new File([blob], 'cover.jpg', { type: blob.type });
+      const newUrl = await uploadToR2(file, 'migrated/covers');
+      if (newUrl) {
+        await sb.from('albums').update({ cover_url: newUrl }).eq('id', al.id);
+        addLog(`✓ Album ${al.id} cover`);
+      }
+    } catch(e) { addLog(`✗ Album ${al.id}: ${e.message}`); }
+  }
+
+  // Migrate profile photo
+  const { data: profile } = await sb.from('profile').select('id, photo_url').single();
+  if (profile?.photo_url?.includes('cloudinary')) {
+    try {
+      const blob = await fetch(profile.photo_url).then(r => r.blob());
+      const file = new File([blob], 'avatar.jpg', { type: blob.type });
+      const newUrl = await uploadToR2(file, 'migrated/profile');
+      if (newUrl) {
+        await sb.from('profile').update({ photo_url: newUrl }).eq('id', profile.id);
+        addLog('✓ Profile photo');
+      }
+    } catch(e) { addLog(`✗ Profile: ${e.message}`); }
+  }
+
+  // Migrate post covers
+  const { data: posts } = await sb.from('posts').select('id, cover_url').like('cover_url', '%cloudinary%');
+  addLog(`Found ${posts?.length || 0} post covers`);
+
+  for (const post of (posts || []).filter(p => p.cover_url)) {
+    try {
+      const blob = await fetch(post.cover_url).then(r => r.blob());
+      const file = new File([blob], 'cover.jpg', { type: blob.type });
+      const newUrl = await uploadToR2(file, 'migrated/posts');
+      if (newUrl) {
+        await sb.from('posts').update({ cover_url: newUrl }).eq('id', post.id);
+        addLog(`✓ Post ${post.id}`);
+      }
+    } catch(e) { addLog(`✗ Post ${post.id}: ${e.message}`); }
+  }
+
+  addLog('✓ Migration complete! Remove this button.');
+}
+
 // ════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════
@@ -2133,5 +2199,7 @@ if (hash.startsWith('post-')) {
 });
 
 </script>
+<button onclick="migrateToR2()" style="position:fixed;bottom:2rem;right:2rem;z-index:9999;padding:1rem;background:blue;color:white;border:none;cursor:pointer;border-radius:4px;">Migrate to R2</button>
+<div id="r2-migrate-log" style="position:fixed;bottom:5rem;right:2rem;z-index:9999;background:white;border:1px solid #ccc;padding:1rem;max-width:400px;max-height:300px;overflow-y:auto;font-size:12px;font-family:monospace;"></div>
 </body>
 </html>
