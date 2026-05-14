@@ -1312,8 +1312,11 @@ async function uploadToR2(file, folder) {
     console.error('Upload failed:', e.message);
     return null;
   const res = await fetch(R2_WORKER_URL, {
-  method: 'POST',
-  body: form
+	method: 'POST',
+	body: form,
+	headers: {
+    'X-Upload-Token': ''
+  }
 });
   }
 }
