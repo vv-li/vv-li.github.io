@@ -1903,7 +1903,7 @@ async function savePost(published) {
   }
 
   const slug = generateSlug(title);
-  const payload = { title, tag, body, published, slug, postTags };
+  const payload = { title, tag, body, published, slug, tags: postTags };
   if (cover_url) payload.cover_url = cover_url;
 
   let error;
@@ -1996,12 +1996,17 @@ function tbFormat(type) {
   const html = type === 'hr' ? open : open + selected + close;
   if (sel && sel.rangeCount > 0) {
     const range = sel.getRangeAt(0);
-    range.deleteContents();
-    const fragment = range.createContextualFragment(html);
-    range.insertNode(fragment);
-    sel.collapseToEnd();
+    const selectedText = range.toString();
+    if (selectedText) {
+      range.deleteContents();
+      const fragment = range.createContextualFragment(html);
+      range.insertNode(fragment);
+      sel.collapseToEnd();
+    } else {
+      document.execCommand('insertHTML', false, html);
+    }
   } else {
-    editor.innerHTML += html;
+    document.execCommand('insertHTML', false, html);
   }
 }
 
