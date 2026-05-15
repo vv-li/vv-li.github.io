@@ -1317,6 +1317,25 @@ async function uploadToR2(file, folder) {
   }
 }
 
+async function deleteFromR2(url) {
+  if (!url || !url.includes('r2.dev')) return;
+  try {
+    // Extract the key from the R2 URL
+    const key = url.split('.r2.dev/')[1];
+    if (!key) return;
+    await fetch(R2_WORKER_URL, {
+      method: 'DELETE',
+      headers: {
+        'X-Upload-Token': UPLOAD_TOKEN || '',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ key })
+    });
+  } catch(e) {
+    console.error('R2 delete failed:', e.message);
+  }
+}
+
 // ════════════════════════════════════════════
 // SECTION NAVIGATION
 // ════════════════════════════════════════════
@@ -1679,6 +1698,8 @@ async function replacePhoto(photoId, albumId, input) {
   if (!file) return;
 
   const { data: original } = await sb.from('photos').select('created_at, caption').eq('id', photoId).single();
+  
+  if (original?.url) await deleteFromR2(original.url);
 
   setStatus('photo-status', 'loading', 'Replacing photo…');
 
@@ -1708,7 +1729,8 @@ async function savePhotoCaption(photoId, albumId) {
 
 async function deletePhoto(id, path, albumId) {
   if (!confirm('Delete this photo?')) return;
-  if (path) await sb.storage.from('site-media').remove([path]);
+  const { data } = await sb.from('photos').select('url').eq('id', id).single();
+  if (data?.url) await deleteFromR2(data.url);
   await sb.from('photos').delete().eq('id', id);
   loadAdminPhotos(albumId);
 }
@@ -1881,7 +1903,7 @@ async function savePost(published) {
   }
 
   const slug = generateSlug(title);
-  const payload = { title, tag, body, published, slug, tags };
+  const payload = { title, tag, body, published, slug, postTags };
   if (cover_url) payload.cover_url = cover_url;
 
   let error;
@@ -1957,7 +1979,7 @@ function tbFormat(type) {
   const editor = document.getElementById('post-body');
   editor.focus();
   const sel = window.getSelection();
-  const selected = sel && sel.toString() ? sel.toString() : 'Your text here';
+  const selected = sel && sel.rangeCount > 0 && sel.toString() ? sel.toString() : 'Your text here';
   const tags = {
     bold:      ['<strong>', '</strong>'],
     italic:    ['<em>', '</em>'],
@@ -1969,10 +1991,17 @@ function tbFormat(type) {
     quote:     ['<blockquote style="border-left:3px solid var(--dusk);padding-left:1rem;color:var(--stone);font-style:italic;margin:1rem 0;">', '</blockquote>'],
     hr:        ['<hr style="border:none;border-top:0.5px solid var(--dusk);margin:1.5rem 0;">', ''],
   };
-  if (type === 'hr') { document.execCommand('insertHTML', false, tags.hr[0]); return; }
-  if (tags[type]) {
-    const [open, close] = tags[type];
-    document.execCommand('insertHTML', false, open + selected + close);
+  if (!tags[type]) return;
+  const [open, close] = tags[type];
+  const html = type === 'hr' ? open : open + selected + close;
+  if (sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const fragment = range.createContextualFragment(html);
+    range.insertNode(fragment);
+    sel.collapseToEnd();
+  } else {
+    editor.innerHTML += html;
   }
 }
 
@@ -2042,10 +2071,78 @@ async function adminLogin() {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   setStatus('login-status', 'loading', 'Signing in…');
+
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if (error) { setStatus('login-status', 'error', error.message); return; }
   currentUser = data.user;
+
+  // Check if MFA is required
+  const { data: mfaData } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (mfaData.nextLevel === 'aal2' && mfaData.nextLevel !== mfaData.currentLevel) {
+    showMFAChallenge();
+    return;
+  }
+
   openAdminPanel();
+}
+
+async function showMFAChallenge() {
+  setStatus('login-status', 'loading', '');
+  const loginForm = document.getElementById('admin-login').querySelector('div');
+
+  // Hide email/password fields
+  document.getElementById('login-email').closest('.field').style.display = 'none';
+  document.getElementById('login-password').closest('.field').style.display = 'none';
+  document.querySelector('[onclick="adminLogin()"]').style.display = 'none';
+
+  // Show MFA input
+  const mfaDiv = document.createElement('div');
+  mfaDiv.id = 'mfa-challenge-section';
+  mfaDiv.innerHTML = `
+    <p style="font-size:13px;color:var(--stone);margin-bottom:1.25rem;">Enter the 6-digit code from your authenticator app.</p>
+    <div class="field">
+      <label>Authentication code</label>
+      <input type="text" id="mfa-challenge-code" placeholder="000000" maxlength="6"
+        style="letter-spacing:0.2em;font-size:1.2rem;text-align:center;"
+        onkeydown="if(event.key==='Enter') verifyMFALogin()">
+    </div>
+    <div style="display:flex;gap:1rem;margin-top:1rem;">
+      <button class="btn btn-md btn-primary" onclick="verifyMFALogin()">Verify</button>
+      <button class="btn btn-md btn-ghost" onclick="resetLoginForm()">Back</button>
+    </div>
+  `;
+  loginForm.appendChild(mfaDiv);
+  document.getElementById('mfa-challenge-code').focus();
+}
+
+async function verifyMFALogin() {
+  const code = document.getElementById('mfa-challenge-code').value.trim();
+  setStatus('login-status', 'loading', 'Verifying…');
+
+  const { data: factors } = await sb.auth.mfa.listFactors();
+  const totpFactor = factors.totp[0];
+  if (!totpFactor) { setStatus('login-status', 'error', 'No 2FA factor found.'); return; }
+
+  const { data: challengeData, error: cErr } = await sb.auth.mfa.challenge({ factorId: totpFactor.id });
+  if (cErr) { setStatus('login-status', 'error', cErr.message); return; }
+
+  const { error } = await sb.auth.mfa.verify({
+    factorId: totpFactor.id,
+    challengeId: challengeData.id,
+    code
+  });
+
+  if (error) { setStatus('login-status', 'error', 'Invalid code — try again.'); return; }
+  openAdminPanel();
+}
+
+function resetLoginForm() {
+  document.getElementById('login-email').closest('.field').style.display = 'block';
+  document.getElementById('login-password').closest('.field').style.display = 'block';
+  document.querySelector('[onclick="adminLogin()"]').style.display = 'inline-block';
+  const mfaSection = document.getElementById('mfa-challenge-section');
+  if (mfaSection) mfaSection.remove();
+  setStatus('login-status', 'loading', '');
 }
 
 async function adminLogout() {
