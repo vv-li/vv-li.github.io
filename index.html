@@ -821,6 +821,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
   gtag('js', new Date());
   gtag('config', 'G-3D9VTTS2LM');
 </script>
+<script src="https://cdn.jsdelivr.net/npm/exifreader@4.14.1/dist/exif-reader.min.js"></script>
 </head>
 <body>
 
@@ -968,7 +969,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
   </div>
   <div class="section-label"><span>Get in touch</span></div>
   <h1 style="font-family:'Cormorant Garamond',serif;font-size:2.5rem;font-weight:300;margin-bottom:0.75rem;">I'd love to hear from you!</h1>
-  <p style="font-size:14px;color:var(--stone);line-height:1.9;margin-bottom:1.5rem;">If you'd like to share any thoughts about my site or any of its contents, or if you'd like to inquire about a collaboration or business opportunity, please drop me a line!</p>
+  <p style="font-size:14px;color:var(--stone);line-height:1.9;margin-bottom:1.5rem;">If you'd like to share any thoughts or feedback about my site or any of its contents, or if you'd like to inquire about a collaboration or business opportunity, please drop me a line!</p>
   <div class="field">
     <label>Your name</label>
     <input type="text" id="cf-name" placeholder="Your name">
@@ -1278,7 +1279,7 @@ function sanitize(html) {
 }
 
 // ════════════════════════════════════════════
-// CONFIG — Replace with your Supabase values
+// Supabase CONFIG
 // ════════════════════════════════════════════
 const SUPABASE_URL = 'https://yhbdnonbkdbtokqfypiw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloYmRub25ia2RidG9rcWZ5cGl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNjIxNzQsImV4cCI6MjA5MjczODE3NH0.x477IXZ_kMF8zGjvbGPbRIJbARTGfdbqJqB6m7q43M8';
@@ -1545,7 +1546,7 @@ async function openAlbum(id) {
   document.getElementById('album-photos-grid').innerHTML = '<div class="empty-state"><p class="loading-dots">Loading photos</p></div>';
   document.getElementById('album-view').scrollIntoView({ behavior: 'smooth' });
 
-  const { data: photos } = await sb.from('photos').select('*').eq('album_id', id).order('created_at');
+  const { data: photos } = await sb.from('photos').select('*').eq('album_id', id).order('taken_at', { ascending: true, nullsFirst: false }).order('created_at', { ascending: true });
   renderAlbumPhotos(photos || []);
 }
 
@@ -1645,9 +1646,10 @@ async function uploadPhotos(input) {
 
   let uploaded = 0;
   for (const file of files) {
-    const url = await uploadToR2(file, `albums/${albumId}`);
-    if (!url) { setStatus('photo-status','error','Upload failed on one or more photos.'); return; }
-    await sb.from('photos').insert({ album_id: albumId, url, caption });
+    const newUrl = await uploadToR2(file, `albums/${albumId}`);
+    if (!newUrl) { setStatus('photo-status','error','Upload failed on one or more photos.'); return; }
+    const taken_at = await getPhotoDate(file);
+    await sb.from('photos').insert({ album_id: albumId, url: newUrl, caption, taken_at });
     uploaded++;
   }
 
@@ -1665,7 +1667,7 @@ async function uploadPhotos(input) {
 
 async function loadAdminPhotos(albumId) {
   if (!albumId) return;
-  const { data } = await sb.from('photos').select('*').eq('album_id', albumId).order('created_at', { ascending: false });
+  const { data } = await sb.from('photos').select('*').eq('album_id', albumId).order('taken_at', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false });
   const el = document.getElementById('admin-photos-list');
   if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No photos in this album yet.</p>'; return; }
 
@@ -1697,15 +1699,18 @@ async function replacePhoto(photoId, albumId, input) {
   const file = input.files[0];
   if (!file) return;
 
-  const { data: original } = await sb.from('photos').select('created_at, caption').eq('id', photoId).single();
-  
-  if (original?.url) await deleteFromR2(original.url);
+  const { data: original } = await sb.from('photos').select('created_at, caption, url').eq('id', photoId).single();
 
   setStatus('photo-status', 'loading', 'Replacing photo…');
 
+  // Upload new photo first
   const newUrl = await uploadToR2(file, `albums/${albumId}`);
   if (!newUrl) { setStatus('photo-status', 'error', 'Upload failed.'); return; }
 
+  // Delete old photo from R2
+  if (original?.url) await deleteFromR2(original.url);
+
+  // Update Supabase with new URL
   const { error } = await sb.from('photos').update({
     url: newUrl,
     storage_path: null,
@@ -2200,6 +2205,20 @@ async function sendContact() {
   }
 }
 
+async function getPhotoDate(file) {
+  try {
+    const buffer = await file.arrayBuffer();
+    const tags = ExifReader.load(buffer);
+    const dateStr = tags['DateTimeOriginal']?.description || tags['DateTime']?.description;
+    if (!dateStr) return null;
+    // EXIF date format: "2024:03:15 14:30:00" → convert to ISO
+    const iso = dateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+    return new Date(iso).toISOString();
+  } catch(e) {
+    return null;
+  }
+}
+
 // ════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════
@@ -2234,6 +2253,81 @@ if (hash.startsWith('post-')) {
  }
 });
 
+async function cleanR2() {
+  const log = document.getElementById('r2-clean-log');
+  const addLog = msg => { log.innerHTML += msg + '<br>'; log.scrollTop = log.scrollHeight; };
+
+  addLog('Fetching active URLs from Supabase...');
+
+  // Get all URLs currently referenced in Supabase
+  const [photosRes, albumsRes, profileRes, postsRes] = await Promise.all([
+    sb.from('photos').select('url'),
+    sb.from('albums').select('cover_url'),
+    sb.from('profile').select('photo_url').single(),
+    sb.from('posts').select('cover_url')
+  ]);
+
+  const activeUrls = new Set([
+    ...(photosRes.data || []).map(p => p.url).filter(Boolean),
+    ...(albumsRes.data || []).map(a => a.cover_url).filter(Boolean),
+    profileRes.data?.photo_url,
+    ...(postsRes.data || []).map(p => p.cover_url).filter(Boolean)
+  ].filter(Boolean));
+
+  addLog(`Found ${activeUrls.size} active URLs in Supabase`);
+
+  // Extract R2 keys from active URLs
+  const activeKeys = new Set([...activeUrls]
+    .filter(url => url && url.includes('r2.dev'))
+    .map(url => url.split('.r2.dev/')[1])
+    .filter(Boolean)
+  );
+
+  addLog(`Found ${activeKeys.size} active R2 keys`);
+
+  // List all objects in R2 via Worker
+  addLog('Listing all R2 objects...');
+  const listRes = await fetch(R2_WORKER_URL + '?list=1&token=' + encodeURIComponent(UPLOAD_TOKEN || ''));
+
+  if (!listRes.ok) {
+    addLog(`✗ Could not list R2 objects: ${await listRes.text()}`);
+    return;
+  }
+
+  const { keys } = await listRes.json();
+  addLog(`Found ${keys.length} objects in R2`);
+
+  const toDelete = keys.filter(k => !activeKeys.has(k));
+  addLog(`${toDelete.length} unused objects to delete`);
+
+  let deleted = 0;
+  for (const key of toDelete) {
+    try {
+      const res = await fetch(R2_WORKER_URL, {
+        method: 'DELETE',
+        headers: {
+          'X-Upload-Token': UPLOAD_TOKEN || '',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ key })
+      });
+      if (res.ok) {
+        deleted++;
+        addLog(`✓ Deleted: ${key}`);
+      } else {
+        addLog(`✗ Failed: ${key}`);
+      }
+    } catch(e) {
+      addLog(`✗ Error: ${key}: ${e.message}`);
+    }
+  }
+
+  addLog(`✓ Done! Deleted ${deleted} unused files. Remove this button.`);
+}
+
 </script>
+<button onclick="cleanR2()" style="position:fixed;bottom:2rem;left:2rem;z-index:9999;padding:1rem;background:darkred;color:white;border:none;cursor:pointer;border-radius:4px;">Clean R2</button>
+<div id="r2-clean-log" style="position:fixed;bottom:5rem;left:2rem;z-index:9999;background:white;border:1px solid #ccc;padding:1rem;max-width:500px;max-height:300px;overflow-y:auto;font-size:12px;font-family:monospace;"></div>
+
 </body>
 </html>
