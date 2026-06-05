@@ -1471,7 +1471,7 @@ async function saveAlbumDesc() {
 let activeAlbumTags = [];
 
 async function loadAlbums() {
-  const { data: albums, error } = await sb.from('albums').select('*, photos(count)').order('created_at', { ascending: false });
+  const { data: albums, error } = await sb.from('albums').select('*, photos(count)').eq('hidden', false).order('created_at', { ascending: false });
   const container = document.getElementById('albums-container');
   if (error || !albums || albums.length === 0) {
     container.innerHTML = `<div class="empty-state"><p class="big">No albums yet.</p></div>`;
@@ -1490,22 +1490,23 @@ async function loadAlbums() {
   const filtered = activeAlbumTags.length ? albums.filter(al => activeAlbumTags.some(t => (al.tags || []).includes(t))) : albums;
 
   const swatches = ['sw1','sw2','sw3','sw4','sw5','sw6'];
-  container.innerHTML = `<div class="albums-grid">${filtered.map((al, i) => {
+  const cards = filtered.map((al, i) => {
     const count = al.photos?.[0]?.count || 0;
     const coverHTML = al.cover_url
-      ? `<img class="album-cover" src="${al.cover_url}" alt="" loading="lazy">`
-      : `<div class="album-cover album-cover-placeholder ${swatches[i % 6]}">${al.title}</div>`;
+      ? '<img class="album-cover" src="' + al.cover_url + '" alt="" loading="lazy">'
+      : '<div class="album-cover album-cover-placeholder ' + swatches[i % 6] + '">' + al.title + '</div>';
     const meta = [al.location, al.year].filter(Boolean).join(' · ');
-    const tagPills = (al.tags || []).map(t => `<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fern);margin-right:0.4rem;">${t}</span>`).join('');
-    return `<div class="album-card" onclick="openAlbum(${al.id})">
-      <div style="overflow:hidden;">${coverHTML}</div>
-      <div class="album-info">
-        <h3>${al.title}</h3>
-        ${tagPills ? `<div style="margin:0.3rem 0;">${tagPills}</div>` : ''}
-        <div class="meta">${meta}${count ? ' · ' + count + ' photo' + (count===1?'':'s') : ''}</div>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
+    const tagPills = (al.tags || []).map(t => '<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fern);margin-right:0.4rem;">' + t + '</span>').join('');
+    const countText = count ? ' · ' + count + ' photo' + (count===1?'':'s') : '';
+    return '<div class="album-card" onclick="openAlbum(' + al.id + ')">'
+      + '<div style="overflow:hidden;">' + coverHTML + '</div>'
+      + '<div class="album-info">'
+      + '<h3>' + al.title + '</h3>'
+      + (tagPills ? '<div style="margin:0.3rem 0;">' + tagPills + '</div>' : '')
+      + '<div class="meta">' + meta + countText + '</div>'
+      + '</div></div>';
+  });
+  container.innerHTML = '<div class="albums-grid">' + cards.join('') + '</div>';
 }
 
 function filterAlbums(tag) {
@@ -1601,14 +1602,17 @@ async function loadAdminAlbums() {
   const { data } = await sb.from('albums').select('*').order('created_at', { ascending: false });
   const el = document.getElementById('admin-albums-list');
   if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No albums yet.</p>'; return; }
-  el.innerHTML = data.map(al => `
-  <div class="list-row">
-    <div class="info"><h4>${al.title}</h4><p>${[al.location,al.year].filter(Boolean).join(' · ')||'No location set'}</p></div>
-    <div class="actions">
-      <button class="btn btn-sm btn-ghost" onclick="editAlbumDesc(${al.id},'${esc(al.title)}','${esc(al.description||'')}')">+ Description</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteAlbum(${al.id})">Delete</button>
-    </div>
-  </div>`).join('');
+  el.innerHTML = data.map(al => {
+    const hiddenBadge = al.hidden ? ' <span style="font-size:10px;color:var(--stone);letter-spacing:0.08em;">(hidden)</span>' : '';
+    const loc = [al.location, al.year].filter(Boolean).join(' · ') || 'No location set';
+    const hideBtn = '<button class="btn btn-sm btn-ghost" onclick="toggleAlbumHidden(' + al.id + ',' + (!!al.hidden) + ')">' + (al.hidden ? 'Show' : 'Hide') + '</button>';
+    const descBtn = '<button class="btn btn-sm btn-ghost" onclick="editAlbumDesc(' + al.id + ',\'' + esc(al.title) + '\',\'' + esc(al.description||'') + '\')">+ Description</button>';
+    const delBtn = '<button class="btn btn-sm btn-danger" onclick="deleteAlbum(' + al.id + ')">Delete</button>';
+    return '<div class="list-row">'
+      + '<div class="info"><h4>' + al.title + hiddenBadge + '</h4><p>' + loc + '</p></div>'
+      + '<div class="actions">' + hideBtn + descBtn + delBtn + '</div>'
+      + '</div>';
+  }).join('');
 }
 
 async function deleteAlbum(id) {
@@ -1675,24 +1679,14 @@ async function loadAdminPhotos(albumId) {
   const { data: al } = await sb.from('albums').select('cover_url').eq('id', albumId).single();
   const currentCover = al?.cover_url || null;
 
-  el.innerHTML = data.map(ph => {
-    const isCover = currentCover && ph.url && currentCover.split('?')[0] === ph.url.split('?')[0];
-    return `<div class="list-row" style="flex-wrap:wrap;gap:0.5rem;">
-      ${ph.url ? `<img class="thumb-preview" src="${ph.url}" alt="">` : '<div class="thumb-preview sw1"></div>'}
-      <div class="info" style="flex:1;min-width:0;">
-        <input type="text" id="caption-${ph.id}" value="${esc(ph.caption||'')}" placeholder="Add caption..."
-          style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid var(--dusk);border-radius:2px;font-family:'Karla',sans-serif;font-size:13px;background:var(--paper);color:var(--ink);outline:none;">
-        <p style="margin-top:0.25rem;">${isCover ? '✓ Current cover' : 'Photo #' + ph.id}</p>
-      </div>
+  el.innerHTML = data.map(al => `
+    <div class="list-row">
+      <div class="info"><h4>${al.title}</h4><p>${[al.location,al.year].filter(Boolean).join(' · ')||'No location set'}</p></div>
       <div class="actions">
-        <button class="btn btn-sm btn-ghost" onclick="savePhotoCaption(${ph.id},${albumId})">Save</button>
-        ${!isCover ? `<button class="btn btn-sm btn-ghost" onclick="setCover(${albumId},'${esc(ph.url||'')}')">Cover</button>` : ''}
-        <button class="btn btn-sm btn-ghost" onclick="document.getElementById('replace-input-${ph.id}').click()">Replace</button>
-        <input type="file" id="replace-input-${ph.id}" accept="image/*" style="display:none;" onchange="replacePhoto(${ph.id},${albumId},this)">
-        <button class="btn btn-sm btn-danger" onclick="deletePhoto(${ph.id},'${esc(ph.storage_path||'')}',${albumId})">×</button>
+        <button class="btn btn-sm btn-ghost" onclick="editAlbumDesc(${al.id},'${esc(al.title)}','${esc(al.description||'')}')">+ Description</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteAlbum(${al.id})">Delete</button>
       </div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 }
 
 async function replacePhoto(photoId, albumId, input) {
@@ -1738,6 +1732,11 @@ async function deletePhoto(id, path, albumId) {
   if (data?.url) await deleteFromR2(data.url);
   await sb.from('photos').delete().eq('id', id);
   loadAdminPhotos(albumId);
+}
+
+async function toggleAlbumHidden(id, currentlyHidden) {
+  await sb.from('albums').update({ hidden: !currentlyHidden }).eq('id', id);
+  loadAdminAlbums();
 }
 
 // ════════════════════════════════════════════
@@ -1958,14 +1957,14 @@ async function loadAdminPosts() {
   if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No posts yet.</p>'; return; }
   el.innerHTML = data.map(p => {
     const date = new Date(p.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-    return `<div class="list-row">
-      <div class="info"><h4>${p.title}</h4><p>${date} · ${p.published?'Published':'Draft'}</p></div>
-      <div class="actions">
-  <button class="btn btn-sm btn-ghost" onclick="editPost(${p.id})">Edit</button>
-  ${!p.published ? `<button class="btn btn-sm btn-ghost" onclick="publishExisting(${p.id})">Publish</button>` : ''}
-  <button class="btn btn-sm btn-danger" onclick="deletePost(${p.id})">Delete</button>
-</div>
-    </div>`;
+    const publishBtn = !p.published ? '<button class="btn btn-sm btn-ghost" onclick="publishExisting(' + p.id + ')">Publish</button>' : '';
+    return '<div class="list-row">'
+      + '<div class="info"><h4>' + p.title + '</h4><p>' + date + ' · ' + (p.published?'Published':'Draft') + '</p></div>'
+      + '<div class="actions">'
+      + '<button class="btn btn-sm btn-ghost" onclick="editPost(' + p.id + ')">Edit</button>'
+      + publishBtn
+      + '<button class="btn btn-sm btn-danger" onclick="deletePost(' + p.id + ')">Delete</button>'
+      + '</div></div>';
   }).join('');
 }
 
