@@ -1146,7 +1146,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
         </div>
         <div class="field">
           <label>Caption</label>
-          <input type="text" id="ph-caption" placeholder="Optional caption for this photo">
+          <input type="text" id="ph-caption" placeholder="Optional caption for this album">
         </div>
         <div class="drop-zone">
           <input type="file" id="photo-file-input" accept="image/*" multiple onchange="uploadPhotos(this)">
@@ -1679,14 +1679,48 @@ async function loadAdminPhotos(albumId) {
   const { data: al } = await sb.from('albums').select('cover_url').eq('id', albumId).single();
   const currentCover = al?.cover_url || null;
 
-  el.innerHTML = data.map(al => `
-    <div class="list-row">
-      <div class="info"><h4>${al.title}</h4><p>${[al.location,al.year].filter(Boolean).join(' · ')||'No location set'}</p></div>
-      <div class="actions">
-        <button class="btn btn-sm btn-ghost" onclick="editAlbumDesc(${al.id},'${esc(al.title)}','${esc(al.description||'')}')">+ Description</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteAlbum(${al.id})">Delete</button>
+  el.innerHTML = data.map(ph => `
+  <div class="list-row">
+    <img class="thumb-preview"
+         src="${ph.url || ''}"
+         alt="">
+
+    <div class="info" style="flex:1;">
+      <input
+        id="caption-${ph.id}"
+        type="text"
+        value="${ph.caption || ''}"
+        placeholder="Caption"
+        style="width:100%;margin-bottom:0.4rem;"
+      >
+
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button class="btn btn-sm btn-ghost"
+          onclick="savePhotoCaption(${ph.id}, ${albumId})">
+          Save caption
+        </button>
+
+        <button class="btn btn-sm btn-ghost"
+          onclick="setCover(${albumId}, '${ph.url}')">
+          ${ph.url === currentCover ? 'Cover ✓' : 'Set cover'}
+        </button>
+
+        <label class="btn btn-sm btn-ghost">
+          Replace
+          <input type="file"
+                 accept="image/*"
+                 style="display:none"
+                 onchange="replacePhoto(${ph.id}, ${albumId}, this)">
+        </label>
+
+        <button class="btn btn-sm btn-danger"
+          onclick="deletePhoto(${ph.id}, null, ${albumId})">
+          Delete
+        </button>
       </div>
-    </div>`).join('');
+    </div>
+  </div>
+`).join('');
 }
 
 async function replacePhoto(photoId, albumId, input) {
