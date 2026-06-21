@@ -1207,6 +1207,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('quote')">" Quote</button>
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbLink()">🔗 Link</button>
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbImage()">🖼 Image</button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbEmbed()">🎵 Embed</button>
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('hr')">— Divider</button>
   </div>
   <div id="post-body" contenteditable="true" onpaste="cleanPaste(event)" style="
@@ -1629,6 +1630,22 @@ async function setCover(albumId, url) {
   loadAdminAlbums();
 }
 
+function tbEmbed() {
+  const url = prompt('Paste Spotify URL (track, album or playlist):');
+  if (!url) return;
+  
+  // Convert to embed URL
+  const embedUrl = url
+    .replace('https://open.spotify.com/', 'https://open.spotify.com/embed/')
+    .replace('https://spotify.com/', 'https://open.spotify.com/embed/')
+    .split('?')[0]; // remove any query params
+
+  const html = '<iframe src="' + embedUrl + '" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius:8px;display:block;margin:1.5rem 0;"></iframe>';
+  
+  document.getElementById('post-body').focus();
+  document.execCommand('insertHTML', false, html);
+}
+
 // ════════════════════════════════════════════
 // PHOTOS
 // ════════════════════════════════════════════
@@ -1686,6 +1703,7 @@ async function loadAdminPhotos(albumId) {
          alt="">
 
     <div class="info" style="flex:1;">
+      <p style="font-size:11px;color:var(--stone);margin-bottom:0.3rem;">Photo #${ph.id}</p>
       <input
         id="caption-${ph.id}"
         type="text"
