@@ -6,6 +6,8 @@
 <title>Vivian Li — Photography & Reflections </title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Karla:wght@300;400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -26,10 +28,16 @@ body {
   font-family: 'Karla', sans-serif;
   background: var(--paper);
   color: var(--ink);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 300;
   line-height: 1.7;
   overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 15px;
+  }
 }
 
 /* ── NAV ─────────────────────────────────── */
@@ -109,7 +117,7 @@ nav {
 
 .hero-name {
   font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(2.8rem, 6vw, 4.5rem);
+  font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 300;
   line-height: 1.05;
   letter-spacing: 0.02em;
@@ -184,12 +192,12 @@ nav {
 #portals {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 50vh;
+  min-height: 35vh;
   border-top: 0.5px solid var(--dusk);
 }
 
 .portal {
-  padding: 5rem 4rem;
+  padding: 4rem 3rem;
   border-right: 0.5px solid var(--dusk);
   cursor: pointer;
   transition: background 0.3s;
@@ -201,27 +209,28 @@ nav {
 .portal:hover { background: rgba(74,82,64,0.03); }
 
 .portal-icon {
-  width: 48px; height: 48px;
-  margin-bottom: 2rem;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 1rem;
   opacity: 0.4;
 }
 
 .portal h2 {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   font-weight: 300;
   line-height: 1.1;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.5rem;
 }
 
 .portal h2 em { font-style: italic; color: var(--fern); }
 
 .portal p {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--stone);
   max-width: 38ch;
-  line-height: 1.8;
-  margin-bottom: 2rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
 }
 
 .portal-cta {
@@ -240,8 +249,8 @@ nav {
 
 .albums-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
 }
 
 .album-card {
@@ -257,7 +266,7 @@ nav {
 
 .album-cover {
   width: 100%;
-  aspect-ratio: 4/3;
+  aspect-ratio: 5/4;
   object-fit: cover;
   display: block;
   transition: transform 0.5s ease;
@@ -380,6 +389,18 @@ nav {
   font-size: 0.9rem;
   color: rgba(255,255,255,0.9);
   line-height: 1.4;
+}
+
+@media (max-width: 900px) {
+  .albums-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .albums-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── LIGHTBOX ───────────────────────────── */
@@ -868,7 +889,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
   <div class="section-label"><span>Who am I</span></div>
   <p style="
     font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(1rem, 2vw, 1.2rem);
+    font-size: clamp(0.9rem, 1.7vw, 1.1rem);
     font-weight: 300;
     font-style: italic;
     line-height: 1.7;
@@ -1084,14 +1105,14 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
         <div class="status-msg" id="profile-status"></div>
       </div>
       <div class="card">
-        <h3>Profile photo</h3>
-        <div class="drop-zone">
-          <input type="file" id="profile-photo-input" accept="image/*" onchange="uploadProfilePhoto(this)">
-          <p>Drop photo or click to browse</p>
-          <small>JPEG or PNG — square works best</small>
-        </div>
-        <div class="status-msg" id="photo-upload-status"></div>
-      </div>
+		  <h3>Profile photo</h3>
+		  <div class="drop-zone">
+			<input type="file" id="profile-photo-input" accept="image/*" onchange="uploadProfilePhoto(this)">
+			<p>Drop photo or click to browse</p>
+			<small>JPEG or PNG — square works best</small>
+		  </div>
+		  <div class="status-msg" id="photo-upload-status"></div>
+	  </div>
     </div>
   </div>
 
@@ -1188,12 +1209,16 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 	    </div>
       </div>
       <div class="field">
-        <label>Cover image (optional)</label>
-        <div class="drop-zone" style="padding: 1rem;">
-          <input type="file" id="post-cover-input" accept="image/*">
-          <p style="font-size:12px;">Upload a cover photo</p>
-        </div>
-      </div>
+		  <label>Cover image (optional)</label>
+		  <div id="cover-preview" style="display:none;margin-bottom:0.5rem;position:relative;">
+			<img id="cover-preview-img" src="" alt="" style="width:100%;border-radius:2px;max-height:160px;object-fit:cover;">
+			<button type="button" onclick="removeCoverPhoto()" style="position:absolute;top:0.5rem;right:0.5rem;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:2px;padding:0.25rem 0.5rem;font-size:11px;cursor:pointer;">✕ Remove</button>
+		  </div>
+		  <div class="drop-zone" style="padding: 1rem;">
+			<input type="file" id="post-cover-input" accept="image/*" onchange="previewCover(this)">
+			<p style="font-size:12px;">Upload a cover photo</p>
+		  </div>
+	  </div>
       <div class="field">
   <label>Body</label>
   <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.5rem;">
@@ -1206,7 +1231,10 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('ol')">1. List</button>
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('quote')">" Quote</button>
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbLink()">🔗 Link</button>
-    <button type="button" class="btn btn-sm btn-ghost" onclick="tbImage()">🖼 Image</button>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="tbImage()">🖼 Image URL</button>
+	<button type="button" class="btn btn-sm btn-ghost" onclick="tbUploadImage()">⬆ Upload Image</button>
+	<input type="file" id="tb-image-upload" accept="image/*" style="display:none;" onchange="tbHandleImageUpload(this)">
+	<button type="button" class="btn btn-sm btn-ghost" onclick="tbCaption()">✍ Caption</button>
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbEmbed()">🎵 Embed</button>
     <button type="button" class="btn btn-sm btn-ghost" onclick="tbFormat('hr')">— Divider</button>
   </div>
@@ -1236,6 +1264,24 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
       <h3>Published posts</h3>
       <div id="admin-posts-list"><p style="font-size:13px;color:var(--stone);">Loading<span class="loading-dots"></span></p></div>
     </div>
+  </div>
+</div>
+
+<div id="crop-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(10,12,8,0.9);align-items:center;justify-content:center;padding:2rem;">
+  <div style="background:var(--paper);border-radius:4px;padding:2rem;width:100%;max-width:480px;">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:300;margin-bottom:1rem;">Crop profile photo</h3>
+    <div style="max-height:350px;overflow:hidden;margin-bottom:1rem;">
+      <img id="crop-image" src="" alt="" style="max-width:100%;display:block;">
+    </div>
+    <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;">
+      <label style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--stone);">Zoom</label>
+      <input type="range" id="crop-zoom" min="0.1" max="3" step="0.05" value="1" style="flex:1;" oninput="cropperInstance && cropperInstance.zoomTo(parseFloat(this.value))">
+    </div>
+    <div style="display:flex;gap:1rem;">
+      <button class="btn btn-md btn-primary" onclick="applyCrop()">Apply & Upload</button>
+      <button class="btn btn-md btn-ghost" onclick="closeCropModal()">Cancel</button>
+    </div>
+    <div class="status-msg" id="crop-status"></div>
   </div>
 </div>
 
@@ -1433,17 +1479,60 @@ async function saveProfile() {
   document.getElementById('p-bio').value = '';
 }
 
-async function uploadProfilePhoto(input) {
+let cropperInstance = null;
+
+function uploadProfilePhoto(input) {
   const file = input.files[0];
   if (!file) return;
-  setStatus('photo-upload-status', 'loading', 'Uploading…');
 
-  const url = await uploadToR2(file, 'profile');
-  if (!url) { setStatus('photo-upload-status', 'error', 'Upload failed.'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const modal = document.getElementById('crop-modal');
+    const img = document.getElementById('crop-image');
+    img.src = e.target.result;
+    modal.style.display = 'flex';
 
-  await sb.from('profile').upsert({ id: 1, photo_url: url });
-  setStatus('photo-upload-status', 'success', 'Photo updated!');
-  loadProfile();
+    // Destroy previous cropper if exists
+    if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+
+    // Init cropper after image loads
+    img.onload = () => {
+      cropperInstance = new Cropper(img, {
+        aspectRatio: 1,
+        viewMode: 1,
+        autoCropArea: 0.8,
+        movable: true,
+        zoomable: true,
+        rotatable: false,
+        scalable: false,
+        cropBoxResizable: false,
+      });
+    };
+  };
+  reader.readAsDataURL(file);
+}
+
+function closeCropModal() {
+  document.getElementById('crop-modal').style.display = 'none';
+  if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+  document.getElementById('profile-photo-input').value = '';
+}
+
+async function applyCrop() {
+  if (!cropperInstance) return;
+  setStatus('crop-status', 'loading', 'Uploading…');
+
+  // Get cropped canvas as blob
+  cropperInstance.getCroppedCanvas({ width: 400, height: 400 }).toBlob(async blob => {
+    const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+    const url = await uploadToR2(file, 'profile');
+    if (!url) { setStatus('crop-status', 'error', 'Upload failed.'); return; }
+
+    await sb.from('profile').upsert({ id: 1, photo_url: url });
+    setStatus('crop-status', 'success', 'Photo updated!');
+    closeCropModal();
+    loadProfile();
+  }, 'image/jpeg', 0.9);
 }
 
 let descAlbumId = null;
@@ -1497,13 +1586,13 @@ async function loadAlbums() {
       ? '<img class="album-cover" src="' + al.cover_url + '" alt="" loading="lazy">'
       : '<div class="album-cover album-cover-placeholder ' + swatches[i % 6] + '">' + al.title + '</div>';
     const meta = [al.location, al.year].filter(Boolean).join(' · ');
-    const tagPills = (al.tags || []).map(t => '<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fern);margin-right:0.4rem;">' + t + '</span>').join('');
+    const tagPills = (al.tags || []).map(t => '<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fern);">' + t.replace(/ /g, '\u00a0') + '</span>').join('');
     const countText = count ? ' · ' + count + ' photo' + (count===1?'':'s') : '';
     return '<div class="album-card" onclick="openAlbum(' + al.id + ')">'
       + '<div style="overflow:hidden;">' + coverHTML + '</div>'
       + '<div class="album-info">'
       + '<h3>' + al.title + '</h3>'
-      + (tagPills ? '<div style="margin:0.3rem 0;">' + tagPills + '</div>' : '')
+      + (tagPills ? '<div style="margin:0.3rem 0;display:flex;flex-wrap:wrap;gap:0.3rem;">' + tagPills + '</div>' : '')
       + '<div class="meta">' + meta + countText + '</div>'
       + '</div></div>';
   });
@@ -1961,6 +2050,7 @@ async function savePost(published) {
   const slug = generateSlug(title);
   const payload = { title, tag, body, published, slug, tags: postTags };
   if (cover_url) payload.cover_url = cover_url;
+  if (window._removeCover) { payload.cover_url = null; window._removeCover = false; }
 
   let error;
   if (editId) {
@@ -1996,6 +2086,13 @@ async function editPost(id) {
   document.getElementById('post-title').value = p.title;
   document.getElementById('post-tag').value = p.tag || 'Reflection';
   document.getElementById('post-body').innerHTML = p.body || '';
+  if (p.cover_url) {
+    document.getElementById('cover-preview-img').src = p.cover_url;
+    document.getElementById('cover-preview').style.display = 'block';
+  } else {
+    document.getElementById('cover-preview').style.display = 'none';
+  }
+  window._removeCover = false;
   document.getElementById('post-tags').value = (p.tags || []).join(', ');
   document.getElementById('post-editor-title').textContent = 'Editing: ' + p.title;
   document.getElementById('cancel-edit-btn').style.display = 'inline-block';
@@ -2085,8 +2182,9 @@ function tbLink() {
 function tbImage() {
   const url = prompt('Enter image URL:');
   if (!url) return;
+  const width = prompt('Width? (e.g. 100% or 400px, leave blank for 100%)', '100%') || '100%';
   document.getElementById('post-body').focus();
-  document.execCommand('insertHTML', false, `<img src="${url}" style="width:100%;border-radius:2px;margin:1.5rem 0;display:block;" alt="">`);
+  document.execCommand('insertHTML', false, '<img src="' + url + '" style="width:' + width + ';border-radius:2px;margin:1.5rem auto;display:block;" alt="" onclick="selectPostImage(this)">');
 }
 
 function cleanPaste(e) {
@@ -2097,6 +2195,118 @@ function cleanPaste(e) {
     .map(para => `<p>${para.trim()}</p>`)
     .join('');
   document.execCommand('insertHTML', false, cleaned);
+}
+
+async function tbUploadImage() {
+  document.getElementById('tb-image-upload').click();
+}
+
+async function tbHandleImageUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const url = await uploadToR2(file, 'posts/inline');
+  if (!url) { alert('Upload failed'); return; }
+  const width = prompt('Width? (e.g. 100% or 400px, leave blank for 100%)', '100%') || '100%';
+  const html = '<img src="' + url + '" style="width:' + width + ';border-radius:2px;margin:1rem auto;display:block;" alt="" onclick="selectPostImage(this)">';
+  document.getElementById('post-body').focus();
+  document.execCommand('insertHTML', false, html);
+  input.value = '';
+}
+
+function selectPostImage(img) {
+  // Remove any existing image toolbar
+  const existing = document.getElementById('img-toolbar');
+  if (existing) existing.remove();
+  if (!img) return;
+
+  const toolbar = document.createElement('div');
+  toolbar.id = 'img-toolbar';
+  toolbar.style.cssText = 'position:fixed;background:var(--ink);color:var(--paper);border-radius:3px;padding:0.4rem 0.6rem;display:flex;gap:0.75rem;align-items:center;z-index:999;font-size:12px;font-family:\'Karla\',sans-serif;';
+
+  // Position near the image
+  const rect = img.getBoundingClientRect();
+  toolbar.style.top = (rect.top + window.scrollY - 40) + 'px';
+  toolbar.style.left = rect.left + 'px';
+
+  toolbar.innerHTML = ''
+    + '<span style="cursor:pointer;" onclick="resizePostImage(\'100%\')">Full</span>'
+    + '<span style="cursor:pointer;" onclick="resizePostImage(\'75%\')">75%</span>'
+    + '<span style="cursor:pointer;" onclick="resizePostImage(\'50%\')">50%</span>'
+    + '<span style="cursor:pointer;" onclick="resizePostImage(\'25%\')">25%</span>'
+    + '<span style="cursor:pointer;" onclick="addImageCaption()">✍ Caption</span>'
+    + '<span style="cursor:pointer;color:#ff6b6b;" onclick="deletePostImage()">✕ Delete</span>';
+
+  document.body.appendChild(toolbar);
+  window._selectedPostImg = img;
+
+  // Close toolbar when clicking elsewhere
+  setTimeout(() => {
+    document.addEventListener('click', function closeImgToolbar(e) {
+      if (!toolbar.contains(e.target) && e.target !== img) {
+        toolbar.remove();
+        window._selectedPostImg = null;
+        document.removeEventListener('click', closeImgToolbar);
+      }
+    });
+  }, 100);
+}
+
+function resizePostImage(width) {
+  if (window._selectedPostImg) {
+    window._selectedPostImg.style.width = width;
+    document.getElementById('img-toolbar')?.remove();
+    window._selectedPostImg = null;
+  }
+}
+
+function deletePostImage() {
+  if (window._selectedPostImg) {
+    window._selectedPostImg.remove();
+    document.getElementById('img-toolbar')?.remove();
+    window._selectedPostImg = null;
+  }
+}
+
+function tbCaption() {
+  const text = prompt('Enter caption:');
+  if (!text) return;
+  document.getElementById('post-body').focus();
+  document.execCommand('insertHTML', false, '<p style="font-size:12px;font-style:italic;color:var(--stone);margin-top:-0.6rem;margin-bottom:1.2rem;line-height:1.5;text-align:center;">' + text + '</p>');
+}
+
+function addImageCaption() {
+  const img = window._selectedPostImg;
+  if (!img) return;
+  const text = prompt('Enter caption:');
+  if (!text) return;
+  const caption = document.createElement('p');
+  caption.style.cssText = 'font-size:12px;font-style:italic;color:var(--stone);margin-top:-0.6rem;margin-bottom:1.2rem;line-height:1.5;text-align:center;';
+  caption.textContent = text;
+  img.insertAdjacentElement('afterend', caption);
+  document.getElementById('img-toolbar')?.remove();
+  window._selectedPostImg = null;
+}
+
+function previewCover(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('cover-preview-img').src = e.target.result;
+    document.getElementById('cover-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeCoverPhoto() {
+  document.getElementById('post-cover-input').value = '';
+  document.getElementById('cover-preview').style.display = 'none';
+  document.getElementById('cover-preview-img').src = '';
+  window._removeCover = false;
+  document.getElementById('cover-preview').style.display = 'none';
+  document.getElementById('cover-preview-img').src = '';
+  // If editing an existing post, mark cover for removal
+  window._removeCover = true;
 }
 
 // ════════════════════════════════════════════
@@ -2310,6 +2520,8 @@ if (hash.startsWith('post-')) {
   });
  }
 });
+
+
 
 </script>
 </body>
