@@ -34,12 +34,6 @@ body {
   overflow-x: hidden;
 }
 
-@media (max-width: 768px) {
-  body {
-    font-size: 15px;
-  }
-}
-
 /* ── NAV ─────────────────────────────────── */
 nav {
   position: fixed;
@@ -117,7 +111,7 @@ nav {
 
 .hero-name {
   font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(2.1rem, 4.3vw, 3.1rem);
   font-weight: 300;
   line-height: 1.05;
   letter-spacing: 0.02em;
@@ -192,7 +186,7 @@ nav {
 #portals {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 35vh;
+  min-height: 45vh;
   border-top: 0.5px solid var(--dusk);
 }
 
@@ -217,7 +211,7 @@ nav {
 
 .portal h2 {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 300;
   line-height: 1.1;
   margin-bottom: 0.5rem;
@@ -226,7 +220,7 @@ nav {
 .portal h2 em { font-style: italic; color: var(--fern); }
 
 .portal p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--stone);
   max-width: 38ch;
   line-height: 1.6;
@@ -234,7 +228,7 @@ nav {
 }
 
 .portal-cta {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--fern);
@@ -833,6 +827,33 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 .sw4{background:linear-gradient(170deg,#384838,#202c20,#4a5e48)}
 .sw5{background:linear-gradient(150deg,#483838,#281e1e,#604848)}
 .sw6{background:linear-gradient(180deg,#2a3a2a,#182018,#3a503a)}
+
+@media (max-width: 768px) {
+  body { font-size: 15px; }
+
+  #portals { min-height: 50vh; }
+
+  .portal { padding: 3rem 2rem; }
+
+  .portal h2 { font-size: 1.8rem; margin-bottom: 0.8rem; }
+
+  .portal p { font-size: 13px; line-height: 1.8; margin-bottom: 1.5rem; }
+
+  .portal-icon { width: 40px; height: 40px; margin-bottom: 1.5rem; }
+
+  .hero-name { font-size: clamp(2.2rem, 8vw, 3.5rem); }
+
+  .albums-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .album-cover { height: 140px; }
+
+  #who-am-i p { font-size: clamp(0.9rem, 3vw, 1.1rem); }
+}
+
+@media (max-width: 480px) {
+  .albums-grid { grid-template-columns: 1fr; }
+  #portals { grid-template-columns: 1fr; }
+}
 </style>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3D9VTTS2LM"></script>
