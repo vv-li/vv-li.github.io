@@ -980,13 +980,18 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
      BLOG SECTION
 ════════════════════════════════════════ -->
 <section id="blog">
-  <div class="section-label"><span>Writing</span></div>
+  <div class="section-label"><span>Original writing</span></div>
   <div id="post-tag-filters" style="display:flex;flex-wrap:wrap;gap:0.5rem;padding:0 3rem 1.5rem;"></div>
   <div class="blog-posts-grid" id="posts-container">
     <div class="empty-state" id="posts-loading">
       <p class="loading-dots">Loading journal</p>
     </div>
   </div>
+  <div style="padding: 4rem 3rem 0;">
+    <div class="section-label"><span>Featured reads</span></div>
+    <p id="reading-tagline" style="font-size:13px;color:var(--stone);margin-bottom:2.5rem;max-width:60ch;">Books, essays and articles worth your time.</p>
+    <div id="reading-grid" class="albums-grid"></div>
+  </div>  
 </section>
 
 <!-- POST FULL VIEW -->
@@ -1098,6 +1103,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
     <button class="admin-tab" onclick="switchTab('albums')">Albums</button>
     <button class="admin-tab" onclick="switchTab('photos')">Photos</button>
     <button class="admin-tab" onclick="switchTab('posts')">Blog posts</button>
+	<button class="admin-tab" onclick="switchTab('reading')">Reading list</button>
   </div>
 
   <!-- PROFILE TAB -->
@@ -1285,6 +1291,61 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
       <div id="admin-posts-list"><p style="font-size:13px;color:var(--stone);">Loading<span class="loading-dots"></span></p></div>
     </div>
   </div>
+  	<!-- READING LIST TAB -->
+  <div class="admin-section" id="tab-reading">
+    <div class="admin-grid">
+      <div class="card">
+        <h3 id="reading-editor-title">Add a book</h3>
+        <input type="hidden" id="reading-edit-id" value="">
+		<div class="field">
+          <label>Section tagline</label>
+          <input type="text" id="rl-tagline" placeholder="Books, essays and articles worth your time.">
+          <button class="btn btn-sm btn-ghost" style="margin-top:0.5rem;" onclick="saveReadingTagline()">Save tagline</button>
+          <div class="status-msg" id="tagline-status"></div>
+        </div>
+        <div class="field">
+          <label>Title</label>
+          <input type="text" id="rl-title" placeholder="e.g. Thinking Fast and Slow">
+        </div>
+        <div class="field">
+          <label>Author</label>
+          <input type="text" id="rl-author" placeholder="e.g. Daniel Kahneman">
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <textarea id="rl-desc" style="min-height:80px;" placeholder="A sentence about why it's worth reading..."></textarea>
+        </div>
+        <div class="field">
+          <label>Link URL</label>
+          <input type="text" id="rl-url" placeholder="https://www.goodreads.com/...">
+        </div>
+        <div class="field">
+          <label>Cover image</label>
+          <div id="rl-cover-preview" style="display:none;margin-bottom:0.5rem;">
+            <img id="rl-cover-img" src="" alt="" style="width:80px;height:110px;object-fit:cover;border-radius:2px;border:0.5px solid var(--dusk);">
+          </div>
+          <div class="drop-zone" style="padding:1rem;">
+            <input type="file" id="rl-cover-input" accept="image/*" onchange="previewReadingCover(this)">
+            <p style="font-size:12px;">Upload cover photo</p>
+          </div>
+        </div>
+        <div class="field">
+          <label>Sort order (lower = first)</label>
+          <input type="number" id="rl-order" placeholder="0" value="0">
+        </div>
+        <div style="display:flex;gap:1rem;">
+          <button class="btn btn-md btn-primary" onclick="saveReading()">Save</button>
+          <button class="btn btn-md btn-ghost" id="rl-cancel-btn" style="display:none;" onclick="clearReadingEditor()">Cancel</button>
+        </div>
+        <div class="status-msg" id="reading-status"></div>
+      </div>
+
+      <div class="card">
+        <h3>Your reading list</h3>
+        <div id="admin-reading-list"><p style="font-size:13px;color:var(--stone);">Loading<span class="loading-dots"></span></p></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="crop-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(10,12,8,0.9);align-items:center;justify-content:center;padding:2rem;">
@@ -1422,6 +1483,7 @@ function showSection(name) {
   } else if (name === 'blog') {
     document.getElementById('blog').style.display = 'block';
     loadPosts();
+    loadReading();	
   } else {
     document.getElementById(name).style.display = 'block';
   }
@@ -2329,6 +2391,160 @@ function removeCoverPhoto() {
   window._removeCover = true;
 }
 
+async function saveReadingTagline() {
+  const tagline = document.getElementById('rl-tagline').value.trim();
+  setStatus('tagline-status', 'loading', 'Saving…');
+  const { error } = await sb.from('profile').upsert({ id: 1, reading_tagline: tagline });
+  if (error) { setStatus('tagline-status', 'error', error.message); return; }
+  setStatus('tagline-status', 'success', 'Saved!');
+  const el = document.getElementById('reading-tagline');
+  if (el) el.textContent = tagline;
+}
+ 
+async function loadReading() {
+  const grid = document.getElementById('reading-grid');
+  if (!grid) return;
+
+  // Load tagline from profile
+  const { data: profile } = await sb.from('profile').select('reading_tagline').single();
+  if (profile?.reading_tagline) {
+    const el = document.getElementById('reading-tagline');
+    if (el) el.textContent = profile.reading_tagline;
+    const input = document.getElementById('rl-tagline');
+    if (input) input.value = profile.reading_tagline;
+  }
+
+  const { data, error } = await sb.from('reading_list').select('*').order('sort_order').order('created_at');
+  if (!data || !data.length) {
+    grid.innerHTML = '<div class="empty-state"><p>No reads added yet.</p></div>';
+    return;
+  }
+ 
+  const swatches = ['sw1','sw2','sw3','sw4','sw5','sw6'];
+  grid.innerHTML = data.map((item, i) => {
+    const cover = item.cover_url
+      ? '<img src="' + item.cover_url + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+      : '<div class="' + swatches[i % 6] + '" style="width:100%;height:100%;"></div>';
+    return '<a href="' + (item.url || '#') + '" target="_blank" rel="noopener" style="text-decoration:none;">'
+      + '<div class="album-card" style="cursor:pointer;">'
+      + '<div class="album-cover" style="position:relative;overflow:hidden;">' + cover + '</div>'
+      + '<div class="album-info">'
+      + '<h3>' + item.title + '</h3>'
+      + (item.author ? '<p style="font-size:12px;color:var(--stone);font-style:italic;margin-bottom:0.25rem;">' + item.author + '</p>' : '')
+      + (item.description ? '<p style="font-size:12px;color:var(--stone);line-height:1.5;">' + item.description + '</p>' : '')
+      + '</div>'
+      + '</div>'
+      + '</a>';
+  }).join('');
+}
+
+function previewReadingCover(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('rl-cover-img').src = e.target.result;
+    document.getElementById('rl-cover-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveReading() {
+  const title = document.getElementById('rl-title').value.trim();
+  if (!title) { setStatus('reading-status', 'error', 'Please add a title.'); return; }
+
+  const editId = document.getElementById('reading-edit-id').value;
+  setStatus('reading-status', 'loading', 'Saving…');
+
+  let cover_url = null;
+  const coverFile = document.getElementById('rl-cover-input').files[0];
+  if (coverFile) {
+    cover_url = await uploadToR2(coverFile, 'reading');
+  }
+
+  const payload = {
+    title,
+    author: document.getElementById('rl-author').value.trim(),
+    description: document.getElementById('rl-desc').value.trim(),
+    url: document.getElementById('rl-url').value.trim(),
+    sort_order: parseInt(document.getElementById('rl-order').value) || 0
+  };
+  if (cover_url) payload.cover_url = cover_url;
+
+  let error;
+  if (editId) {
+    ({ error } = await sb.from('reading_list').update(payload).eq('id', editId));
+  } else {
+    ({ error } = await sb.from('reading_list').insert(payload));
+  }
+
+  if (error) { setStatus('reading-status', 'error', error.message); return; }
+  setStatus('reading-status', 'success', 'Saved!');
+  clearReadingEditor();
+  loadAdminReading();
+  loadReading();
+}
+
+function clearReadingEditor() {
+  document.getElementById('reading-edit-id').value = '';
+  document.getElementById('rl-title').value = '';
+  document.getElementById('rl-author').value = '';
+  document.getElementById('rl-desc').value = '';
+  document.getElementById('rl-url').value = '';
+  document.getElementById('rl-order').value = '0';
+  document.getElementById('rl-cover-input').value = '';
+  document.getElementById('rl-cover-preview').style.display = 'none';
+  document.getElementById('reading-editor-title').textContent = 'Add a book';
+  document.getElementById('rl-cancel-btn').style.display = 'none';
+}
+
+async function editReading(id) {
+  const { data } = await sb.from('reading_list').select('*').eq('id', id).single();
+  if (!data) return;
+  document.getElementById('reading-edit-id').value = data.id;
+  document.getElementById('rl-title').value = data.title || '';
+  document.getElementById('rl-author').value = data.author || '';
+  document.getElementById('rl-desc').value = data.description || '';
+  document.getElementById('rl-url').value = data.url || '';
+  document.getElementById('rl-order').value = data.sort_order || 0;
+  if (data.cover_url) {
+    document.getElementById('rl-cover-img').src = data.cover_url;
+    document.getElementById('rl-cover-preview').style.display = 'block';
+  }
+  document.getElementById('reading-editor-title').textContent = 'Editing: ' + data.title;
+  document.getElementById('rl-cancel-btn').style.display = 'inline-block';
+  document.getElementById('tab-reading').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function deleteReading(id) {
+  if (!confirm('Remove this from your reading list?')) return;
+  await sb.from('reading_list').delete().eq('id', id);
+  loadAdminReading();
+  loadReading();
+}
+
+async function loadAdminReading() {
+  const { data } = await sb.from('reading_list').select('*').order('sort_order').order('created_at');
+  const el = document.getElementById('admin-reading-list');
+  if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No books yet.</p>'; return; }
+  el.innerHTML = data.map(item => {
+    const thumb = item.cover_url
+      ? '<img src="' + item.cover_url + '" style="width:40px;height:56px;object-fit:cover;border-radius:2px;border:0.5px solid var(--dusk);flex-shrink:0;">'
+      : '<div style="width:40px;height:56px;background:#3a4a30;border-radius:2px;flex-shrink:0;"></div>';
+    return '<div class="list-row">'
+      + thumb
+      + '<div class="info" style="flex:1;min-width:0;">'
+      + '<h4>' + item.title + '</h4>'
+      + '<p>' + (item.author || 'No author') + '</p>'
+      + '</div>'
+      + '<div class="actions">'
+      + '<button class="btn btn-sm btn-ghost" onclick="editReading(' + item.id + ')">Edit</button>'
+      + '<button class="btn btn-sm btn-danger" onclick="deleteReading(' + item.id + ')">Delete</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
 // ════════════════════════════════════════════
 // ADMIN UI
 // ════════════════════════════════════════════
@@ -2458,6 +2674,7 @@ function switchTab(name) {
   if (name === 'posts') loadAdminPosts();
   if (name === 'albums') loadAdminAlbums();
   if (name === 'photos') loadPhotoAlbumSelect();
+  if (name === 'reading') loadAdminReading();
 }
 
 function setStatus(id, type, msg) {
