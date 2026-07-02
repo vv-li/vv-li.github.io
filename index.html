@@ -990,7 +990,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
   <div style="padding: 4rem 3rem 0;">
     <div class="section-label"><span>Featured reads</span></div>
     <p id="reading-tagline" style="font-size:13px;color:var(--stone);margin-bottom:2.5rem;max-width:60ch;">Books, essays and articles worth your time.</p>
-    <div id="reading-grid" class="albums-grid"></div>
+    <div id="reading-grid" style="max-width:700px;"></div><div id="reading-grid" style="max-width:700px;"></div>
   </div>  
 </section>
 
@@ -1196,7 +1196,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
           <input type="text" id="ph-caption" placeholder="Optional caption for this album">
         </div>
         <div class="drop-zone">
-          <input type="file" id="photo-file-input" accept="image/*" multiple onchange="uploadPhotos(this)">
+          <input type="file" id="photo-file-input" accept="image/*,video/*,.gif" multiple onchange="uploadPhotos(this)">
           <p>Drop photos or click to browse</p>
           <small>JPEG, PNG, WebP — multiple OK</small>
         </div>
@@ -1328,6 +1328,10 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
             <input type="file" id="rl-cover-input" accept="image/*" onchange="previewReadingCover(this)">
             <p style="font-size:12px;">Upload cover photo</p>
           </div>
+        </div>
+		<div class="field">
+          <label>Tags</label>
+          <input type="text" id="rl-tags" placeholder="e.g. economics, fiction (comma separated)">
         </div>
         <div class="field">
           <label>Sort order (lower = first)</label>
@@ -2405,7 +2409,7 @@ async function loadReading() {
   const grid = document.getElementById('reading-grid');
   if (!grid) return;
 
-  // Load tagline from profile
+  // Load tagline
   const { data: profile } = await sb.from('profile').select('reading_tagline').single();
   if (profile?.reading_tagline) {
     const el = document.getElementById('reading-tagline');
@@ -2414,24 +2418,28 @@ async function loadReading() {
     if (input) input.value = profile.reading_tagline;
   }
 
-  const { data, error } = await sb.from('reading_list').select('*').order('sort_order').order('created_at');
+  const { data } = await sb.from('reading_list').select('*').order('sort_order').order('created_at');
   if (!data || !data.length) {
     grid.innerHTML = '<div class="empty-state"><p>No reads added yet.</p></div>';
     return;
   }
- 
+
   const swatches = ['sw1','sw2','sw3','sw4','sw5','sw6'];
   grid.innerHTML = data.map((item, i) => {
     const cover = item.cover_url
-      ? '<img src="' + item.cover_url + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
-      : '<div class="' + swatches[i % 6] + '" style="width:100%;height:100%;"></div>';
-    return '<a href="' + (item.url || '#') + '" target="_blank" rel="noopener" style="text-decoration:none;">'
-      + '<div class="album-card" style="cursor:pointer;">'
-      + '<div class="album-cover" style="position:relative;overflow:hidden;">' + cover + '</div>'
-      + '<div class="album-info">'
-      + '<h3>' + item.title + '</h3>'
-      + (item.author ? '<p style="font-size:12px;color:var(--stone);font-style:italic;margin-bottom:0.25rem;">' + item.author + '</p>' : '')
-      + (item.description ? '<p style="font-size:12px;color:var(--stone);line-height:1.5;">' + item.description + '</p>' : '')
+      ? '<img src="' + item.cover_url + '" style="width:80px;height:110px;object-fit:cover;flex-shrink:0;border-radius:2px;">'
+      : '<div class="' + swatches[i % 6] + '" style="width:80px;height:110px;flex-shrink:0;border-radius:2px;"></div>';
+    const tagPills = (item.tags || []).map(t =>
+      '<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fern);margin-right:0.4rem;white-space:nowrap;">' + t + '</span>'
+    ).join('');
+    return '<a href="' + (item.url || '#') + '" target="_blank" rel="noopener" style="text-decoration:none;display:block;">'
+      + '<div style="display:flex;gap:1.25rem;align-items:flex-start;padding:1.25rem 0;border-bottom:0.5px solid var(--dusk);transition:padding-left 0.2s;" onmouseover="this.style.paddingLeft=\'0.5rem\'" onmouseout="this.style.paddingLeft=\'0\'">'
+      + cover
+      + '<div style="flex:1;min-width:0;">'
+      + '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:400;margin-bottom:0.2rem;color:var(--ink);">' + item.title + '</h3>'
+      + (item.author ? '<p style="font-size:12px;color:var(--stone);font-style:italic;margin-bottom:0.4rem;">' + item.author + '</p>' : '')
+      + (item.description ? '<p style="font-size:13px;color:var(--stone);line-height:1.6;margin-bottom:0.5rem;">' + item.description + '</p>' : '')
+      + (tagPills ? '<div style="display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.3rem;">' + tagPills + '</div>' : '')
       + '</div>'
       + '</div>'
       + '</a>';
@@ -2462,12 +2470,14 @@ async function saveReading() {
     cover_url = await uploadToR2(coverFile, 'reading');
   }
 
+  const tags = document.getElementById('rl-tags').value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
   const payload = {
     title,
     author: document.getElementById('rl-author').value.trim(),
     description: document.getElementById('rl-desc').value.trim(),
     url: document.getElementById('rl-url').value.trim(),
-    sort_order: parseInt(document.getElementById('rl-order').value) || 0
+    sort_order: parseInt(document.getElementById('rl-order').value) || 0,
+    tags
   };
   if (cover_url) payload.cover_url = cover_url;
 
@@ -2492,6 +2502,7 @@ function clearReadingEditor() {
   document.getElementById('rl-desc').value = '';
   document.getElementById('rl-url').value = '';
   document.getElementById('rl-order').value = '0';
+  document.getElementById('rl-tags').value = '';
   document.getElementById('rl-cover-input').value = '';
   document.getElementById('rl-cover-preview').style.display = 'none';
   document.getElementById('reading-editor-title').textContent = 'Add a book';
@@ -2507,6 +2518,7 @@ async function editReading(id) {
   document.getElementById('rl-desc').value = data.description || '';
   document.getElementById('rl-url').value = data.url || '';
   document.getElementById('rl-order').value = data.sort_order || 0;
+  document.getElementById('rl-tags').value = (data.tags || []).join(', ');
   if (data.cover_url) {
     document.getElementById('rl-cover-img').src = data.cover_url;
     document.getElementById('rl-cover-preview').style.display = 'block';
@@ -2527,22 +2539,21 @@ async function loadAdminReading() {
   const { data } = await sb.from('reading_list').select('*').order('sort_order').order('created_at');
   const el = document.getElementById('admin-reading-list');
   if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No books yet.</p>'; return; }
-  el.innerHTML = data.map(item => {
-    const thumb = item.cover_url
-      ? '<img src="' + item.cover_url + '" style="width:40px;height:56px;object-fit:cover;border-radius:2px;border:0.5px solid var(--dusk);flex-shrink:0;">'
-      : '<div style="width:40px;height:56px;background:#3a4a30;border-radius:2px;flex-shrink:0;"></div>';
-    return '<div class="list-row">'
-      + thumb
-      + '<div class="info" style="flex:1;min-width:0;">'
-      + '<h4>' + item.title + '</h4>'
-      + '<p>' + (item.author || 'No author') + '</p>'
-      + '</div>'
-      + '<div class="actions">'
-      + '<button class="btn btn-sm btn-ghost" onclick="editReading(' + item.id + ')">Edit</button>'
-      + '<button class="btn btn-sm btn-danger" onclick="deleteReading(' + item.id + ')">Delete</button>'
-      + '</div>'
-      + '</div>';
-  }).join('');
+  el.style.display = 'block';
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;width:100%;">'
+    + data.map((item, idx) => {
+      return '<div style="border:0.5px solid var(--dusk);border-radius:3px;padding:0.6rem;">'
+        + '<div style="font-size:11px;color:var(--stone);margin-bottom:0.3rem;">' + (idx + 1) + ' · #' + item.id + '</div>'
+        + '<h4 style="font-size:13px;margin-bottom:0.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + item.title + '</h4>'
+        + '<p style="font-size:11px;color:var(--stone);margin-bottom:0.4rem;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (item.author || 'No author') + '</p>'
+        + (item.tags && item.tags.length ? '<p style="font-size:10px;color:var(--fern);margin-bottom:0.4rem;">' + item.tags.join(', ') + '</p>' : '')
+        + '<div style="display:flex;gap:0.3rem;">'
+        + '<button class="btn btn-sm btn-ghost" onclick="editReading(' + item.id + ')" style="font-size:10px;padding:0.2rem 0.5rem;">Edit</button>'
+        + '<button class="btn btn-sm btn-danger" onclick="deleteReading(' + item.id + ')" style="font-size:10px;padding:0.2rem 0.5rem;">×</button>'
+        + '</div>'
+        + '</div>';
+    }).join('')
+    + '</div>';
 }
 
 // ════════════════════════════════════════════
