@@ -2540,14 +2540,15 @@ async function loadAdminReading() {
   const el = document.getElementById('admin-reading-list');
   if (!data || !data.length) { el.innerHTML = '<p style="font-size:13px;color:var(--stone);">No books yet.</p>'; return; }
   el.style.display = 'block';
-  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;width:100%;">'
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;">'
     + data.map((item, idx) => {
-      return '<div style="border:0.5px solid var(--dusk);border-radius:3px;padding:0.6rem;">'
-        + '<div style="font-size:11px;color:var(--stone);margin-bottom:0.3rem;">' + (idx + 1) + ' · #' + item.id + '</div>'
-        + '<h4 style="font-size:13px;margin-bottom:0.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + item.title + '</h4>'
-        + '<p style="font-size:11px;color:var(--stone);margin-bottom:0.4rem;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (item.author || 'No author') + '</p>'
-        + (item.tags && item.tags.length ? '<p style="font-size:10px;color:var(--fern);margin-bottom:0.4rem;">' + item.tags.join(', ') + '</p>' : '')
-        + '<div style="display:flex;gap:0.3rem;">'
+      return '<div style="border:0.5px solid var(--dusk);border-radius:3px;padding:0.75rem;">'
+        + '<div style="font-size:11px;color:var(--stone);margin-bottom:0.3rem;letter-spacing:0.05em;">' + (idx + 1) + ' · #' + item.id + '</div>'
+        + '<h4 style="font-size:13px;font-weight:400;margin-bottom:0.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + item.title + '</h4>'
+        + '<p style="font-size:11px;color:var(--stone);font-style:italic;margin-bottom:0.3rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (item.author || '') + '</p>'
+        + (item.description ? '<p style="font-size:11px;color:var(--stone);line-height:1.5;margin-bottom:0.3rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + item.description + '</p>' : '')
+        + (item.tags && item.tags.length ? '<p style="font-size:10px;color:var(--fern);margin-bottom:0.4rem;">' + item.tags.join(' · ') + '</p>' : '')
+        + '<div style="display:flex;gap:0.3rem;margin-top:0.4rem;">'
         + '<button class="btn btn-sm btn-ghost" onclick="editReading(' + item.id + ')" style="font-size:10px;padding:0.2rem 0.5rem;">Edit</button>'
         + '<button class="btn btn-sm btn-danger" onclick="deleteReading(' + item.id + ')" style="font-size:10px;padding:0.2rem 0.5rem;">×</button>'
         + '</div>'
