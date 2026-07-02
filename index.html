@@ -870,9 +870,9 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 <nav>
   <ul class="nav-links">
   	<li><a href="#" onclick="showPortals(); window.scrollTo({top:0, behavior:'smooth'});">Home</a></li>
-  	<li><a href="#" onclick="showSection('photography')">Photography</a></li>
-  	<li><a href="#" onclick="showSection('blog')">Writing</a></li>
-	<li><a href="#" onclick="showSection('contact')">Contact</a></li>
+  	<li><a href="#photography" onclick="showSection('photography')">Photography</a></li>
+	<li><a href="#blog" onclick="showSection('blog')">Writing</a></li>
+	<li><a href="#contact" onclick="showSection('contact')">Contact</a></li>
   	<li>
     	  <a href="https://instagram.com/vivlikesbirds" target="_blank" title="Instagram" style="display:flex;align-items:center;color:var(--stone);">
       	    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -929,8 +929,8 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
       <circle cx="24" cy="25" r="3"/>
       <circle cx="38" cy="15" r="2" fill="currentColor"/>
     </svg>
-    <h2>Photography</h2>
-    <p>Snapshots, pictures, and photos, from my memory card to camera roll</p>
+	<h2 id="photo-portal-title">Photography</h2>
+	<p id="photo-portal-desc">Snapshots, pictures, and photos, from my memory card to camera roll</p>
     <div class="portal-cta">Browse albums →</div>
   </div>
 
@@ -981,6 +981,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
 ════════════════════════════════════════ -->
 <section id="blog">
   <div class="section-label"><span>Original writing</span></div>
+  <p id="blog-section-desc" style="font-size:13px;color:var(--stone);padding:0 3rem 1.5rem;max-width:60ch;">Thought pieces and reflections on life, learnings, and the experience of being somewhere. And economics too, on occasion.</p>
   <div id="post-tag-filters" style="display:flex;flex-wrap:wrap;gap:0.5rem;padding:0 3rem 1.5rem;"></div>
   <div class="blog-posts-grid" id="posts-container">
     <div class="empty-state" id="posts-loading">
@@ -990,7 +991,7 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
   <div style="padding: 4rem 3rem 0;">
     <div class="section-label"><span>Featured reads</span></div>
     <p id="reading-tagline" style="font-size:13px;color:var(--stone);margin-bottom:2.5rem;max-width:60ch;">Books, essays and articles worth your time.</p>
-    <div id="reading-grid" style="max-width:700px;"></div><div id="reading-grid" style="max-width:700px;"></div>
+    <div id="reading-grid" style="max-width:700px;min-height:600px;"></div><div id="reading-grid" style="max-width:700px;"></div>
   </div>  
 </section>
 
@@ -1123,9 +1124,25 @@ footer .copy { font-size: 11px; letter-spacing: 0.08em; color: var(--dusk); }
   	  <label>Spotify link</label>
   	  <input type="text" id="p-spotify" placeholder="https://open.spotify.com/track/...">
 	</div>
-        <div class="field">
+    <div class="field">
   	  <label>Who am I</label>
   	  <textarea id="p-bio" placeholder="Write your who am I section here..."></textarea>
+	</div>
+	<div class="field">
+	  <label>Writing section title</label>
+	  <input type="text" id="p-blog-title" placeholder="Notes from above ground">
+	</div>
+	<div class="field">
+	  <label>Writing section description</label>
+	  <textarea id="p-blog-desc" placeholder="Thought pieces and reflections..."></textarea>
+	</div>
+	<div class="field">
+	  <label>Photography portal title</label>
+	  <input type="text" id="p-photo-title" placeholder="Photography">
+	</div>
+	<div class="field">
+	  <label>Photography portal description</label>
+	  <textarea id="p-photo-desc" placeholder="Snapshots, pictures, photos..."></textarea>
 	</div>
         <button class="btn btn-md btn-primary" onclick="saveProfile()">Save profile</button>
         <div class="status-msg" id="profile-status"></div>
@@ -1475,6 +1492,7 @@ async function deleteFromR2(url) {
 const allSections = ['photography','album-view','blog','post-view', 'contact'];
 
 function showSection(name) {
+  window.location.hash = name;
   allSections.forEach(s => {
     document.getElementById(s).style.display = 'none';
   });
@@ -1497,13 +1515,13 @@ function showSection(name) {
 }
 
 function showPortals() {
+  history.pushState('', document.title, window.location.pathname);
   allSections.forEach(s => {
     document.getElementById(s).style.display = 'none';
   });
   document.getElementById('portals').style.display = 'grid';
   document.getElementById('main-footer').style.display = 'flex';
 }
-
 
 // ════════════════════════════════════════════
 // PROFILE
@@ -1544,6 +1562,30 @@ async function loadProfile() {
     const initials = document.getElementById('profile-initials');
     if (initials) initials.style.display = 'none';
   }
+  if (data.blog_title) {
+    const el = document.getElementById('blog-section-title');
+    if (el) el.textContent = data.blog_title;
+    const input = document.getElementById('p-blog-title');
+    if (input) input.value = data.blog_title;
+  }
+  if (data.blog_description) {
+    const el = document.getElementById('blog-section-desc');
+    if (el) el.textContent = data.blog_description;
+    const input = document.getElementById('p-blog-desc');
+    if (input) input.value = data.blog_description;
+  }
+  if (data.photo_title) {
+    const el = document.getElementById('photo-portal-title');
+    if (el) el.textContent = data.photo_title;
+    const input = document.getElementById('p-photo-title');
+    if (input) input.value = data.photo_title;
+  }
+  if (data.photo_description) {
+    const el = document.getElementById('photo-portal-desc');
+    if (el) el.textContent = data.photo_description;
+    const input = document.getElementById('p-photo-desc');
+    if (input) input.value = data.photo_description;
+  }
 }
 
 function formatName(name) {
@@ -1555,9 +1597,13 @@ async function saveProfile() {
   const tagline = document.getElementById('p-tagline').value;
   const bio = document.getElementById('p-bio').value;
   const spotify_url = document.getElementById('p-spotify').value.trim();
+  const blog_title = document.getElementById('p-blog-title').value.trim();
+  const blog_description = document.getElementById('p-blog-desc').value.trim();
+  const photo_title = document.getElementById('p-photo-title').value.trim();
+  const photo_description = document.getElementById('p-photo-desc').value.trim();
 
   setStatus('profile-status', 'loading', 'Saving…');
-  const { error } = await sb.from('profile').upsert({ id: 1, name, tagline, bio, spotify_url });
+  const { error } = await sb.from('profile').upsert({ id: 1, name, tagline, bio, spotify_url, blog_title, blog_description, photo_title, photo_description });
 
   if (error) { setStatus('profile-status', 'error', error.message); return; }
   setStatus('profile-status', 'success', 'Profile saved!');
@@ -1741,8 +1787,12 @@ function renderAlbumPhotos(photos) {
   const heights = [220, 280, 200, 260, 240, 200, 300, 220];
   grid.innerHTML = photos.map((ph, i) => {
     const h = heights[i % heights.length];
+    const isVideo = ph.url && /\.(mp4|mov|hevc|webm|m4v)$/i.test(ph.url);
+    const isGif = ph.url && /\.gif$/i.test(ph.url);
     const imgTag = ph.url
-      ? `<img src="${ph.url}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="lazy">`
+      ? isVideo
+        ? `<video style="width:100%;height:${h}px;object-fit:cover;display:block;" autoplay loop muted playsinline><source src="${ph.url}" type="video/mp4"><source src="${ph.url}" type="video/quicktime"></video>`
+        : `<img src="${ph.url}" alt="${ph.caption||''}" style="width:100%;height:${h}px;object-fit:cover;display:block;" loading="${isGif ? 'eager' : 'lazy'}">`
       : `<div class="${['sw1','sw2','sw3','sw4','sw5','sw6'][i%6]}" style="height:${h}px;"></div>`;
     return `<div class="photo-item" onclick="openLightbox(${i})">
       ${imgTag}
@@ -2424,26 +2474,21 @@ async function loadReading() {
     return;
   }
 
-  const swatches = ['sw1','sw2','sw3','sw4','sw5','sw6'];
-  grid.innerHTML = data.map((item, i) => {
-    const cover = item.cover_url
-      ? '<img src="' + item.cover_url + '" style="width:80px;height:110px;object-fit:cover;flex-shrink:0;border-radius:2px;">'
-      : '<div class="' + swatches[i % 6] + '" style="width:80px;height:110px;flex-shrink:0;border-radius:2px;"></div>';
-    const tagPills = (item.tags || []).map(t =>
-      '<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fern);margin-right:0.4rem;white-space:nowrap;">' + t + '</span>'
-    ).join('');
-    return '<a href="' + (item.url || '#') + '" target="_blank" rel="noopener" style="text-decoration:none;display:block;">'
-      + '<div style="display:flex;gap:1.25rem;align-items:flex-start;padding:1.25rem 0;border-bottom:0.5px solid var(--dusk);transition:padding-left 0.2s;" onmouseover="this.style.paddingLeft=\'0.5rem\'" onmouseout="this.style.paddingLeft=\'0\'">'
-      + cover
-      + '<div style="flex:1;min-width:0;">'
-      + '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:400;margin-bottom:0.2rem;color:var(--ink);">' + item.title + '</h3>'
-      + (item.author ? '<p style="font-size:12px;color:var(--stone);font-style:italic;margin-bottom:0.4rem;">' + item.author + '</p>' : '')
-      + (item.description ? '<p style="font-size:13px;color:var(--stone);line-height:1.6;margin-bottom:0.5rem;">' + item.description + '</p>' : '')
-      + (tagPills ? '<div style="display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.3rem;">' + tagPills + '</div>' : '')
-      + '</div>'
-      + '</div>'
-      + '</a>';
-  }).join('');
+  grid.innerHTML = '<div style="display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr;gap:1rem;">'
+    + data.map(item => {
+      const tagPills = (item.tags || []).map(t =>
+        '<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fern);margin-right:0.4rem;white-space:nowrap;">' + t + '</span>'
+      ).join('');
+      return '<a href="' + (item.url || '#') + '" target="_blank" rel="noopener" style="text-decoration:none;">'
+        + '<div style="border:0.5px solid var(--dusk);border-radius:3px;padding:1.25rem;transition:border-color 0.2s;cursor:pointer;height:100%;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;" onmouseover="this.style.borderColor=\'var(--fern)\'" onmouseout="this.style.borderColor=\'var(--dusk)\'">'
+        + '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:400;margin-bottom:0.2rem;color:var(--ink);">' + item.title + '</h3>'
+        + (item.author ? '<p style="font-size:12px;color:var(--stone);font-style:italic;margin-bottom:0.4rem;">' + item.author + '</p>' : '')
+        + (item.description ? '<p style="font-size:13px;color:var(--stone);line-height:1.6;margin-bottom:0.5rem;">' + item.description + '</p>' : '')
+        + (tagPills ? '<div style="display:flex;flex-wrap:wrap;gap:0.25rem;">' + tagPills + '</div>' : '')
+        + '</div>'
+        + '</a>';
+    }).join('')
+    + '</div>';
 }
 
 function previewReadingCover(input) {
@@ -2746,6 +2791,10 @@ document.addEventListener('DOMContentLoaded', () => {
 const hash = window.location.hash.replace('#', '');
 if (!hash) return;
 
+if (hash === 'photography') { showSection('photography'); return; }
+if (hash === 'blog') { showSection('blog'); return; }
+if (hash === 'contact') { showSection('contact'); return; }
+
 if (hash.startsWith('post-')) {
   const postId = parseInt(hash.replace('post-', ''));
   if (postId) { showSection('blog'); openPost(postId); }
@@ -2769,8 +2818,6 @@ if (hash.startsWith('post-')) {
   });
  }
 });
-
-
 
 </script>
 </body>
